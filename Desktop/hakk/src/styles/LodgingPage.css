@@ -1,0 +1,138 @@
+@import url('./mainpage.css');
+
+/* =========================
+   카테고리 (메인 CSS와 충돌 해결)
+   ========================= */
+.category-wrapper {
+  position: absolute;
+  top: 684px;
+  left: 87px;
+  display: flex;
+  gap: 100px;
+  z-index: 2; /* 헤더/이미지와 겹침 방지 */
+}
+
+/* mainpage.css 의 .category-card { position:absolute } 무력화 */
+.category-wrapper .category-card {
+  position: static !important; /* ✨ 중요: 절대배치 해제 */
+  width: 287px;
+  height: 302px;
+  border-radius: 88px;
+  text-align: center;
+  background-color: #E5E5E5; /* 기본색(양도/AI) */
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border: 1.5px solid #000; /* 피그마 느낌 */
+}
+
+.category-wrapper .category-card.active {
+  background-color: #D4E4E1; /* 숙박 활성화색 */
+}
+
+.category-wrapper .category-card:hover {
+  transform: scale(1.05);
+}
+
+.category-wrapper .category-image {
+  margin-top: 82px;
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.category-wrapper .category-label {
+  margin-top: 10px;
+  font-size: 24px;
+  letter-spacing: 3.36px;
+  font-family: "Inter", sans-serif;
+}
+
+/* =========================
+   필터 + More
+   ========================= */
+.filter-buttons {
+  position: absolute;
+  top: 1060px;
+  left: 87px;
+  display: flex;
+  gap: 10px;
+  z-index: 2;
+}
+
+.filter-buttons button {
+  border: 1.5px solid #000;
+  border-radius: 38px;
+  padding: 6px 20px;
+  font-size: 14px;
+  font-family: "Inter", sans-serif;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* 우측 상단 More+ */
+.more-btn {
+  position: absolute;
+  top: 1060px;
+  right: 80px;
+  background-color: #000;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: "Inter", sans-serif;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* =========================
+   숙박 리스트
+   ========================= */
+.lodging-list {
+  position: absolute;
+  top: 1120px;
+  left: 87px;
+  display: grid;
+  grid-template-columns: repeat(3, 287px);
+  gap: 40px;
+  z-index: 1;
+}
+
+.lodging-card {
+  text-align: center;
+}
+
+.lodging-image {
+  width: 287px;
+  height: 302px;
+  object-fit: cover;
+  border-radius: 49px;
+  background: rgba(72, 72, 72, 0.35);
+}
+
+.lodging-text {
+  margin-top: 8px;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+}
+
+/* =========================
+   푸터 (카드와 겹침 방지)
+   ========================= */
+/* 메인 css의 absolute 위치가 너무 빨라서 겹쳤음 → 더 아래로 내림 */
+.footer-text {
+  position: absolute;
+  top: 1960px;   /* 1667px → 1960px로 내려 카드 2행과 간격 확보 */
+  left: 543px;
+  text-align: center;
+  font-size: 24px;
+  letter-spacing: 3.36px;
+  font-family: "Inter", sans-serif;
+}
+
+.footer-sub {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.more-btn { cursor: pointer; }
+.more-btn.disabled { opacity: .4; pointer-events: none; cursor: default; }

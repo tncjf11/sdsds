@@ -1,0 +1,142 @@
+/* 이 페이지 전용 스코프 */
+.search-page .container {
+  position: relative;
+  width: min(92%, 1280px);
+  min-height: 980px;
+  padding-top: 60px;
+}
+
+/* 헤더(여유 있게) */
+.search-page .header {
+  position: relative;
+  height: 430px;
+}
+.search-page .branding {
+  position: absolute;
+  left: 56px;
+  top: 0;
+}
+.search-page .branding-text {
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 3vw, 40px);
+  letter-spacing: 0.14em;
+  line-height: 1.25;
+}
+.search-page .house-icon {
+  position: absolute;
+  top: 0;
+  left: 230px;
+  width: clamp(180px, 22vw, 240px);
+  height: auto;
+}
+
+/* 우측 상단 돋보기 아이콘 */
+.search-page .controls {
+  position: absolute;
+  top: 22px;
+  right: 28px;
+}
+.search-page .sp-search-top-icon {
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+}
+
+/* 메인 CSS의 .search-icon 규칙과 충돌 방지 */
+.search-page .search-icon {
+  display: none !important;
+}
+
+/* 중앙 검색바 */
+.search-page .search-bar {
+  position: absolute;
+  top: 255px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(72%, 720px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 10px;
+}
+.search-page .sp-search-icon {
+  width: 26px;
+  height: 26px;
+}
+.search-page .search-input {
+  width: 100%;
+  max-width: 560px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: clamp(20px, 2.2vw, 30px);
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+.search-page .search-input::placeholder {
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+.search-page .search-input:focus::placeholder {
+  opacity: 0;
+}
+
+/* 섹션 라벨/결과 */
+.search-page .section-labels {
+  position: absolute;
+  top: 470px;
+  left: 9%;
+  display: flex;
+  gap: 14px;
+}
+.search-page .label-black {
+  background: #000;
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+}
+
+.search-page .results {
+  position: absolute;
+  top: 540px;
+  left: 9%;
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.search-page .result-card {
+  text-align: center;
+  width: 220px;
+}
+.search-page .result-thumbnail {
+  width: 220px;
+  aspect-ratio: 1/1;
+  border-radius: 48px;
+  background: rgba(72, 72, 72, 0.35);
+}
+.search-page .result-text {
+  margin-top: 14px;
+  font-size: 15px;
+  font-family: "Inter", sans-serif;
+  color: #000;
+}
+
+/* 푸터 */
+.search-page .footer {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-size: 24px;
+  letter-spacing: 3.36px;
+}
+.search-page .footer-sub {
+  font-size: 12px;
+}
