@@ -1,142 +1,98 @@
-/* 이 페이지 전용 스코프 */
+/* 스코프 */
 .search-page .container {
   position: relative;
-  width: min(92%, 1280px);
-  min-height: 980px;
-  padding-top: 60px;
+  width: min(90%, 1280px);
+  min-height: 900px;
+  padding-top: 50px;
 }
 
-/* 헤더(여유 있게) */
-.search-page .header {
-  position: relative;
-  height: 430px;
-}
-.search-page .branding {
-  position: absolute;
-  left: 56px;
-  top: 0;
-}
+/* 헤더 */
+.search-page .header { position: relative; height: 380px; }
+.search-page .branding { position: absolute; left: 56px; top: 0; }
 .search-page .branding-text {
   font-family: "Inter", sans-serif;
   font-weight: 800;
-  font-size: clamp(26px, 3vw, 40px);
+  font-size: clamp(22px, 2.5vw, 32px);
   letter-spacing: 0.14em;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .search-page .house-icon {
   position: absolute;
   top: 0;
-  left: 230px;
-  width: clamp(180px, 22vw, 240px);
+  left: 202px;
+  width: 183px;
   height: auto;
 }
 
-/* 우측 상단 돋보기 아이콘 */
+/* 우측 상단 컨트롤: 버튼만 */
 .search-page .controls {
-  position: absolute;
-  top: 22px;
-  right: 28px;
+  position: absolute; top: 8px; right: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
 }
-.search-page .sp-search-top-icon {
-  width: 48px;
-  height: 48px;
-  cursor: pointer;
-}
-
-/* 메인 CSS의 .search-icon 규칙과 충돌 방지 */
-.search-page .search-icon {
-  display: none !important;
+.search-page .search-top-btn {
+  background: #000; color: #fff; padding: 6px 20px;
+  border-radius: 38px; font-size: 14px; font-family: "Inter", sans-serif;
+  cursor: pointer; border: 0;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
-/* 중앙 검색바 */
+/* 혹시 남아 있을지 모를 상단 돋보기 강제 숨김(안전장치) */
+.search-page .sp-search-top-icon { display: none !important; }
+
+/* 검색바: 가운데 한 줄 */
 .search-page .search-bar {
   position: absolute;
-  top: 255px;
+  top: 220px;                 /* 헤더 아래 */
   left: 50%;
   transform: translateX(-50%);
-  width: min(72%, 720px);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  justify-content: center;
-  border-bottom: 2px solid #000;
-  padding-bottom: 10px;
+  width: min(60%, 560px);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  border-bottom: 1px solid #000; padding-bottom: 10px; /* 밑줄 시각 여백 */
 }
-.search-page .sp-search-icon {
-  width: 26px;
-  height: 26px;
-}
+.search-page .sp-search-icon { width: 22px; height: 22px; }
+
+/* 입력창 */
 .search-page .search-input {
-  width: 100%;
-  max-width: 560px;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: clamp(20px, 2.2vw, 30px);
-  letter-spacing: 0.12em;
-  text-align: center;
+  width: 100%; max-width: 460px;
+  border: none; outline: none; background: transparent;
+  font-size: clamp(18px, 2vw, 28px);
+  letter-spacing: 0.14em; text-align: center;
 }
-.search-page .search-input::placeholder {
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
-}
-.search-page .search-input:focus::placeholder {
-  opacity: 0;
-}
+.search-page .search-input::placeholder { opacity: 0.7; transition: opacity .15s ease; }
+.search-page .search-input:focus::placeholder { opacity: 0; }
 
-/* 섹션 라벨/결과 */
-.search-page .section-labels {
+/* 라벨: 검색바와 충분한 간격(붙어 보이지 않게) */
+.search-page .section-label {
   position: absolute;
-  top: 470px;
-  left: 9%;
-  display: flex;
-  gap: 14px;
+  top: 500px;           /* ⬅ 검색바와 간격 넉넉히 (기존보다 ↓) */
+  left: 12%;
 }
-.search-page .label-black {
-  background: #000;
-  color: #fff;
-  border-radius: 999px;
-  padding: 8px 18px;
-  font-size: 16px;
-  font-family: "Inter", sans-serif;
+.search-page .label-chip {
+  background-color: #000; color: #fff;
+  border-radius: 38px; padding: 6px 16px;
+  font-size: 16px; font-family: "Inter", sans-serif;
 }
 
+/* 결과 카드 영역: 라벨을 따라 함께 ↓ */
 .search-page .results {
   position: absolute;
-  top: 540px;
-  left: 9%;
-  display: flex;
-  gap: 40px;
-  flex-wrap: wrap;
+  top: 560px;           /* ⬅ 라벨과도 적당한 간격 */
+  left: 12%;
+  display: flex; gap: 30px; flex-wrap: wrap;
 }
-.search-page .result-card {
-  text-align: center;
-  width: 220px;
-}
+.search-page .result-card { text-align: center; width: 189px; }
 .search-page .result-thumbnail {
-  width: 220px;
-  aspect-ratio: 1/1;
-  border-radius: 48px;
-  background: rgba(72, 72, 72, 0.35);
+  width: 189px; aspect-ratio: 1 / 1;
+  border-radius: 41px; background-color: rgba(72, 72, 72, 0.35);
 }
 .search-page .result-text {
-  margin-top: 14px;
-  font-size: 15px;
-  font-family: "Inter", sans-serif;
-  color: #000;
+  margin-top: 16px; font-size: 14px; font-family: "Inter", sans-serif; color: #000;
 }
 
 /* 푸터 */
 .search-page .footer {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  font-family: "Inter", sans-serif;
-  font-size: 24px;
-  letter-spacing: 3.36px;
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  text-align: center; font-family: "Inter", sans-serif; font-size: 24px; letter-spacing: 3.36px;
 }
-.search-page .footer-sub {
-  font-size: 12px;
-}
+.search-page .footer-sub { font-size: 12px; }

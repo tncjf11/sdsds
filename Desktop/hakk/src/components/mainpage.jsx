@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import Header from "./Header";                      // ✅ 공용 헤더
 import "../styles/mainpage.css";
-import house from "../image/house.png";
 import image19 from "../image/image19.png";
 import image21 from "../image/image21.png";
 import image32 from "../image/image32.png";
@@ -27,20 +27,6 @@ export const RentalCard = ({ number, label, style }) => (
   </div>
 );
 
-export const TagGroup = () => (
-  <div className="tag-group">
-    <div className="tag tag-outline" style={{ transform: "rotate(-6.33deg)" }}>
-      short_term
-    </div>
-    <div className="tag tag-outline-white" style={{ transform: "rotate(2.37deg)" }}>
-      to long-term
-    </div>
-    <div className="tag tag-filled" style={{ transform: "rotate(-5.35deg)" }}>
-      rentals!
-    </div>
-  </div>
-);
-
 const Screen = () => {
   const navigate = useNavigate();
 
@@ -54,7 +40,7 @@ const Screen = () => {
   return (
     <div className="screen">
       <div className="container">
-        {/* 상단 오른쪽: 돋보기 아이콘 (누르면 /search 이동) */}
+        {/* 우측 상단 검색 아이콘 */}
         <img
           src={search}
           alt="search"
@@ -62,20 +48,8 @@ const Screen = () => {
           onClick={() => navigate("/search")}
         />
 
-        {/* 헤더 */}
-        <div className="header">
-          <h1 className="main-title">
-            FIT ROOM<br />_Finding<br />a house that suits me
-          </h1>
-          <img src={house} alt="house" className="house-image" />
-        </div>
-
-        {/* 요약/태그 */}
-        <div className="summary-box">
-          <div className="summary-check">Check out</div>
-          <p className="summary-text">your home at a glance,</p>
-        </div>
-        <TagGroup />
+        {/* ✅ 공용 헤더 적용 (메인과 동일 레이아웃) */}
+        <Header />
 
         {/* Top List */}
         <div className="top-list-label">Top List</div>
@@ -98,7 +72,7 @@ const Screen = () => {
         />
         <CategoryCard
           image={image32}
-          label="AI 챗봇"
+          label="글쓰기"
           style={{ left: 900, top: 684 }}
           backgroundColor="#F3E1CB"
           onClick={() => navigate("/chatbot")}
