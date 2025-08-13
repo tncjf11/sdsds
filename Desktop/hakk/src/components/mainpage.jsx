@@ -121,7 +121,7 @@ const Screen = () => {
         />
         <CategoryCard
           image={image32}
-          label="글쓰기"
+          label="업로드"
           style={{ left: 900, top: 684 }}
           backgroundColor="#F3E1CB"
           onClick={() => navigate("/chatbot")}

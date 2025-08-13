@@ -1,0 +1,147 @@
+/* =========================
+   페이지 스코프
+   ========================= */
+.detail-lodging { position: relative; }
+
+/* 공용 .container를 사용하되, 상세는 헤더와 겹치지 않도록 상단 여백 조정 */
+.detail-lodging .detail-tabs,
+.detail-lodging .detail-grid,
+.detail-lodging .footer { position: relative; }
+
+/* 상단 탭 */
+.detail-lodging .detail-tabs {
+  position: absolute;
+  top: 680px;          /* Header 아래 위치 (메인 패턴과 맞춤) */
+  left: 87px;
+  display: flex;
+  gap: 8px;
+}
+.detail-lodging .pill {
+  border: 1.5px solid #000;
+  border-radius: 999px;
+  padding: 7px 24px;
+  background: #fff;
+  cursor: default;
+  font-family: "Inter", sans-serif;
+}
+.detail-lodging .pill--black { background: #000; color: #fff; border: none; }
+
+/* 사진 + 상세 그리드 */
+.detail-lodging .detail-grid {
+  position: absolute;
+  top: 740px;          /* 탭 아래 */
+  left: 87px;
+  right: 87px;
+  display: grid;
+  grid-template-columns: 420px 1fr;   /* 좌: 사진 420px / 우: 텍스트 */
+  gap: 36px;
+  align-items: start;
+  max-width: 1106px;                  /* 1280 - 좌우 87px */
+  margin: 0 auto;
+}
+
+/* 좌측 사진 카드 */
+.detail-lodging .photo-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 420px;
+}
+.detail-lodging .pc-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  background: #747474;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  overflow: hidden;
+}
+.detail-lodging .pc-shadow { position: absolute; inset: 0; border-radius: 28px; }
+.detail-lodging .pc-shadow.s1 { background:#9b9b9b; transform: translate(12px,10px); z-index:1; }
+.detail-lodging .pc-shadow.s2 { background:#bdbdbd; transform: translate(22px,18px); z-index:0; }
+.detail-lodging .pc-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 우측 상세 */
+.detail-lodging .detail-info {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.detail-lodging .di-title {
+  margin: 2px 0 6px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: .02em;
+}
+.detail-lodging .di-hr {
+  height: 2px;
+  background: #000;
+  width: 500px;
+  margin: 6px auto 8px;
+}
+.detail-lodging .di-meta {
+  text-align: center;
+  opacity: .85;
+  margin-bottom: 28px;
+  font-size: 18px;
+}
+.detail-lodging .di-body { width: min(520px, 100%); }
+.detail-lodging .di-desc {
+  white-space: pre-line;
+  line-height: 1.7;
+  margin: 0 0 16px;
+  color: #111;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+}
+.detail-lodging .di-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+.detail-lodging .chip {
+  border: 1.5px solid #000;
+  border-radius: 999px;
+  padding: 6px 22px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  font-family: "Inter", sans-serif;
+}
+.detail-lodging .chip--ghost { background: #fff; }
+
+/* 빈 상태 */
+.detail-lodging .dl-empty {
+  width: 100%;
+  padding: 120px 24px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+}
+
+/* 푸터 (검색/양도/숙박과 톤 맞춤) */
+.detail-lodging .footer {
+  position: absolute;
+  top: 1667px;          /* 리스트가 길어지면 조정 필요 */
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-size: 24px;
+  letter-spacing: 3.36px;
+}
+.detail-lodging .footer-sub { font-size: 12px; }
+
+/* 반응형: 좁은 화면에서 세로 배치 */
+@media (max-width: 980px) {
+  .detail-lodging .detail-grid { grid-template-columns: 1fr; }
+  .detail-lodging .photo-card { max-width: 100%; }
+}

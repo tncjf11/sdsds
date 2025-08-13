@@ -1,0 +1,147 @@
+/* =========================
+   페이지 스코프
+   ========================= */
+.detail-transfer { position: relative; }
+
+/* 요소들 상대 배치 */
+.detail-transfer .detail-tabs,
+.detail-transfer .detail-grid,
+.detail-transfer .footer { position: relative; }
+
+/* 상단 탭 */
+.detail-transfer .detail-tabs {
+  position: absolute;
+  top: 680px;          /* Header 아래 */
+  left: 87px;
+  display: flex;
+  gap: 8px;
+}
+.detail-transfer .pill {
+  border: 1.5px solid #000;
+  border-radius: 999px;
+  padding: 7px 24px;
+  background: #fff;
+  cursor: default;
+  font-family: "Inter", sans-serif;
+}
+.detail-transfer .pill--black { background: #000; color: #fff; border: none; }
+
+/* 사진 + 상세 그리드 */
+.detail-transfer .detail-grid {
+  position: absolute;
+  top: 740px;          /* 탭 아래 */
+  left: 87px;
+  right: 87px;
+  display: grid;
+  grid-template-columns: 420px 1fr;   /* 좌: 사진 / 우: 텍스트 */
+  gap: 36px;
+  align-items: start;
+  max-width: 1106px;                  /* 1280 - 좌우 87px */
+  margin: 0 auto;
+}
+
+/* 좌측 사진 카드 */
+.detail-transfer .photo-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 420px;
+}
+.detail-transfer .pc-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  background: #747474;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  overflow: hidden;
+}
+.detail-transfer .pc-shadow { position: absolute; inset: 0; border-radius: 28px; }
+.detail-transfer .pc-shadow.s1 { background:#9b9b9b; transform: translate(12px,10px); z-index:1; }
+.detail-transfer .pc-shadow.s2 { background:#bdbdbd; transform: translate(22px,18px); z-index:0; }
+.detail-transfer .pc-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 우측 상세 */
+.detail-transfer .detail-info {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.detail-transfer .di-title {
+  margin: 2px 0 6px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: .02em;
+}
+.detail-transfer .di-hr {
+  height: 2px;
+  background: #000;
+  width: 500px;
+  margin: 6px auto 8px;
+}
+.detail-transfer .di-meta {
+  text-align: center;
+  opacity: .85;
+  margin-bottom: 28px;
+  font-size: 18px;
+}
+.detail-transfer .di-body { width: min(520px, 100%); }
+.detail-transfer .di-desc {
+  white-space: pre-line;
+  line-height: 1.7;
+  margin: 0 0 16px;
+  color: #111;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+}
+.detail-transfer .di-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+.detail-transfer .chip {
+  border: 1.5px solid #000;
+  border-radius: 999px;
+  padding: 6px 22px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  font-family: "Inter", sans-serif;
+}
+.detail-transfer .chip--ghost { background: #fff; }
+
+/* 빈 상태 */
+.detail-transfer .dt-empty {
+  width: 100%;
+  padding: 120px 24px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+}
+
+/* 푸터 */
+.detail-transfer .footer {
+  position: absolute;
+  top: 1667px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-size: 24px;
+  letter-spacing: 3.36px;
+}
+.detail-transfer .footer-sub { font-size: 12px; }
+
+/* 반응형 */
+@media (max-width: 980px) {
+  .detail-transfer .detail-grid { grid-template-columns: 1fr; }
+  .detail-transfer .photo-card { max-width: 100%; }
+}

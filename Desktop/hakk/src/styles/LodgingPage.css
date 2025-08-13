@@ -54,7 +54,7 @@
   outline: none;
   background: transparent;
   font-size: 14px;
-  width: 120px;
+  width: 90px;               /* ✅ 금액 범위 2칸 대응 (기존 120 → 90) */
 }
 .lodging-page .chip .chip-label { font-size: 14px; }
 .lodging-page .chip.date-chip input { width: 145px; }
@@ -110,7 +110,7 @@
 
 /* ===== 푸터 ===== */
 .lodging-page .footer-text {
-  position: absolute;
+  position: absolute;       /* ✅ 절대배치 유지 (상단 고정 구조와 어울리게) */
   left: 543px;
   text-align: center;
   font-size: 24px; letter-spacing: 3.36px;

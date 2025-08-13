@@ -1,15 +1,14 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "./Header";                     // ✅ 공용 헤더
-import "../styles/LodgingPage.css";                // ✅ 숙박 전용 CSS
+import Header from "./Header";
+import "../styles/LodgingPage.css";
 import search from "../image/search.png";
-import lodgingImg from "../image/image19.png";     // 숙박 아이콘
-import transferImg from "../image/image21.png";    // 양도 아이콘
+import lodgingImg from "../image/image19.png";
+import transferImg from "../image/image21.png";
 import chatbotImg from "../image/image32.png";
-import roomImg from "../image/room-sample.png";    // 숙박 사진 샘플
+import roomImg from "../image/room-sample.png";
 
-// ✅ 예시 데이터(실제 API로 대체 가능)
-//   날짜는 date input과 비교되므로 YYYY-MM-DD 형식으로 잡았어.
+// 예시 데이터
 const LODGINGS = [
   { id: 1, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
   { id: 2, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
@@ -30,13 +29,14 @@ const LodgingPage = () => {
   const navigate = useNavigate();
 
   // ====== 필터 상태 ======
-  const [q, setQ] = useState("");        // 건물명
-  const [from, setFrom] = useState("");  // 시작일
-  const [to, setTo] = useState("");      // 종료일
-  const [max, setMax] = useState("");    // 최대 금액
-  const clearFilters = () => { setQ(""); setFrom(""); setTo(""); setMax(""); };
+  const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [minPrice, setMinPrice] = useState(""); // ✅ 최소 금액
+  const [maxPrice, setMaxPrice] = useState(""); // ✅ 최대 금액
+  const clearFilters = () => { setQ(""); setFrom(""); setTo(""); setMinPrice(""); setMaxPrice(""); };
 
-  // 타이핑 디바운스(검색어만)
+  // 검색어 디바운스
   const [debouncedQ, setDebouncedQ] = useState(q);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 250);
@@ -50,39 +50,58 @@ const LodgingPage = () => {
         debouncedQ.trim() === "" ||
         s.name.toLowerCase().includes(debouncedQ.trim().toLowerCase());
 
-      const okPrice = max === "" || s.price <= Number(max);
+      const okMin = minPrice === "" || s.price >= Number(minPrice);
+      const okMax = maxPrice === "" || s.price <= Number(maxPrice);
 
       let okDate = true;
       if (from && to) okDate = overlap(from, to, s.from, s.to);
       else if (from)  okDate = new Date(from) <= new Date(s.to);
       else if (to)    okDate = new Date(s.from) <= new Date(to);
 
-      return okName && okPrice && okDate;
+      return okName && okMin && okMax && okDate;
     });
-  }, [debouncedQ, from, to, max]);
+  }, [debouncedQ, from, to, minPrice, maxPrice]);
 
   // ====== More+ 페이지네이션 ======
   const PAGE_SIZE = 6;
   const [visible, setVisible] = useState(PAGE_SIZE);
 
-  // 🔁 필터가 바뀌면 첫 페이지로 되돌림
-  useEffect(() => setVisible(PAGE_SIZE), [debouncedQ, from, to, max]);
+  useEffect(() => setVisible(PAGE_SIZE), [debouncedQ, from, to, minPrice, maxPrice]);
 
   const visibleList = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
   const canLoadMore = visible < filtered.length;
   const handleMore = () => setVisible(v => Math.min(v + PAGE_SIZE, filtered.length));
 
-  // ====== 푸터 보정(절대배치 레이아웃 그대로 유지) ======
-  const baseFooterTop = 1667;   // 메인 기준
-  const rowHeight = 370;        // 카드(302) + 텍스트/갭 대략치
-  const rows = Math.ceil(visibleList.length / 3);
-  const extraRows = Math.max(0, rows - 2);
-  const footerTop = baseFooterTop + extraRows * rowHeight;
+  // ====== 리스트 실제 높이에 맞춰 푸터 위치 조정 ======
+  const listRef = useRef(null);
+  const [footerTop, setFooterTop] = useState(1667); // 초기 대략치
+
+  useEffect(() => {
+    const calc = () => {
+      const el = listRef.current;
+      if (!el) return;
+      const top = el.offsetTop || 0;        // 리스트의 상단(top)
+      const height = el.offsetHeight || 0;  // 리스트 실제 높이
+      const margin = 60;                    // 리스트와 푸터 간격
+      setFooterTop(top + height + margin);
+    };
+
+    calc(); // 최초
+    // 이미지 로딩 후에도 재계산
+    const imgs = listRef.current?.querySelectorAll("img") || [];
+    imgs.forEach(img => { if (!img.complete) img.addEventListener("load", calc, { once: true }); });
+    window.addEventListener("resize", calc);
+    const id = setTimeout(calc, 0);
+    return () => {
+      window.removeEventListener("resize", calc);
+      clearTimeout(id);
+    };
+  }, [visibleList.length]); // More로 카드 수 변할 때마다
 
   return (
     <div className="screen">
       <div className="container lodging-page">
-        {/* 우측 상단 검색 아이콘 */}
+        {/* 우측 상단 검색 아이콘 (기존 고정) */}
         <img
           src={search}
           alt="search"
@@ -105,7 +124,7 @@ const LodgingPage = () => {
           </div>
           <div className="category-card" onClick={() => navigate("/chatbot")}>
             <img src={chatbotImg} alt="AI 챗봇" className="category-image" />
-            <div className="category-label">글쓰기</div>
+            <div className="category-label">업로드</div>
           </div>
         </div>
 
@@ -129,16 +148,25 @@ const LodgingPage = () => {
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
 
-          {/* 금액 */}
+          {/* 금액: 최소 ~ 최대 */}
           <div className="chip input-chip">
-            <span className="chip-label">금액 ≤</span>
+            <span className="chip-label">금액</span>
             <input
               type="number"
               min="0"
               step="1000"
-              value={max}
-              onChange={(e) => setMax(e.target.value)}
-              placeholder="30000"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              placeholder="최소"
+            />
+            <span className="tilde">~</span>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              placeholder="최대"
             />
             <span className="won">원</span>
           </div>
@@ -158,7 +186,7 @@ const LodgingPage = () => {
         </button>
 
         {/* ===== 숙박 리스트 ===== */}
-        <div className="lodging-list">
+        <div className="lodging-list" ref={listRef}>
           {visibleList.map((s) => (
             <div className="lodging-card" key={s.id}>
               <img src={roomImg} alt="숙박" className="lodging-image" />
@@ -172,7 +200,7 @@ const LodgingPage = () => {
           )}
         </div>
 
-        {/* 푸터 (행 수에 따라 자동 보정) */}
+        {/* 푸터: 리스트 높이에 맞춰 자동 이동 (absolute 유지) */}
         <div className="footer-text" style={{ top: `${footerTop}px` }}>
           FIT ROOM<br />
           <span className="footer-sub">_Finding a house that suits me</span>
