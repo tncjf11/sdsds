@@ -11,10 +11,6 @@
   position: relative;
 }
 
-/* ✅ 헤더(.header/.main-title/.house-image)와
-      요약/태그(.summary-*, .tag-group, .tag*) 관련 규칙은
-      header.css에서 관리하므로 이 파일에는 두지 않습니다. */
-
 /* 카테고리 카드 */
 .category-card {
   position: absolute;
@@ -90,13 +86,28 @@
   font-size: 16px;
   font-family: "Inter", sans-serif;
 }
-.top-list-section {
+
+/* 탭 UI 스타일 */
+.top-tabs {
   position: absolute;
-  top: 1127px;
-  left: 87px;
-  font-size: 24px;
-  letter-spacing: 3.36px;
+  top: 1120px;   /* .top-list-label 아래 */
+  left: 85px;
+  display: inline-flex;
+  gap: 16px;
+}
+.top-tab {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #000;
+  background: #fff;
+  font-size: 18px;
+  letter-spacing: 2px;
   font-family: "Inter", sans-serif;
+  cursor: pointer;
+}
+.top-tab.is-active {
+  background: #000;
+  color: #fff;
 }
 
 /* 우측 상단 검색 아이콘 */

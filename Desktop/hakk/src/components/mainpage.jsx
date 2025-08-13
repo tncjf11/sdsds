@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";                      // ✅ 공용 헤더
 import "../styles/mainpage.css";
@@ -6,6 +6,23 @@ import image19 from "../image/image19.png";
 import image21 from "../image/image21.png";
 import image32 from "../image/image32.png";
 import search from "../image/search.png";
+
+/* =====================[ TopList 탭 데이터 ]===================== */
+const TOPLIST_BY_CATEGORY = {
+  숙박: [
+    "대곡빌라 / 150만원 / 바로입주",
+    "대곡빌라 / 150만원 / 바로입주",
+    "대곡빌라 / 150만원 / 바로입주",
+    "대곡빌라 / 150만원 / 바로입주",
+  ],
+  양도: [
+    "양도 - 대곡빌라 / 140만원 / 협의가능",
+    "양도 - 한강뷰오피스텔 / 90만원 / 2월입주",
+    "양도 - 신림빌라 / 70만원 / 즉시입주",
+    "양도 - 판교원룸 / 85만원 / 3월입주",
+  ],
+};
+/* ============================================================= */
 
 export const CategoryCard = ({ image, label, style, backgroundColor, onClick }) => (
   <div
@@ -30,12 +47,23 @@ export const RentalCard = ({ number, label, style }) => (
 const Screen = () => {
   const navigate = useNavigate();
 
-  const rentalLabels = [
-    "대곡빌라 / 150만원 / 바로입주",
-    "대곡빌라 / 150만원 / 바로입주",
-    "대곡빌라 / 150만원 / 바로입주",
-    "대곡빌라 / 150만원 / 바로입주",
-  ];
+  /* 데모용 기본 배열 — 안정화 */
+  const rentalLabels = useMemo(
+    () => [
+      "대곡빌라 / 150만원 / 바로입주",
+      "대곡빌라 / 150만원 / 바로입주",
+      "대곡빌라 / 150만원 / 바로입주",
+      "대곡빌라 / 150만원 / 바로입주",
+    ],
+    []
+  );
+
+  /* 탭 상태 */
+  const [selectedTab, setSelectedTab] = useState("숙박");
+
+  const currentRentalLabels = useMemo(() => {
+    return TOPLIST_BY_CATEGORY[selectedTab] ?? rentalLabels;
+  }, [selectedTab, rentalLabels]);
 
   return (
     <div className="screen">
@@ -48,12 +76,33 @@ const Screen = () => {
           onClick={() => navigate("/search")}
         />
 
-        {/* ✅ 공용 헤더 적용 (메인과 동일 레이아웃) */}
+        {/* ✅ 공용 헤더 */}
         <Header />
 
         {/* Top List */}
         <div className="top-list-label">Top List</div>
-        <div className="top-list-section">숙박 / 양도</div>
+
+        {/* 숙박 / 양도 탭 */}
+        <div className="top-tabs" role="tablist" aria-label="Top List 카테고리">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedTab === "숙박"}
+            className={`top-tab ${selectedTab === "숙박" ? "is-active" : ""}`}
+            onClick={() => setSelectedTab("숙박")}
+          >
+            숙박
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedTab === "양도"}
+            className={`top-tab ${selectedTab === "양도" ? "is-active" : ""}`}
+            onClick={() => setSelectedTab("양도")}
+          >
+            양도
+          </button>
+        </div>
 
         {/* 카테고리 카드 */}
         <CategoryCard
@@ -79,9 +128,9 @@ const Screen = () => {
         />
 
         {/* 렌탈 카드 */}
-        {rentalLabels.map((label, i) => (
+        {currentRentalLabels.map((label, i) => (
           <RentalCard
-            key={i}
+            key={`${selectedTab}-${i}`}
             number={i + 1}
             label={label}
             style={{ left: 87 + i * 323, top: 1209 }}

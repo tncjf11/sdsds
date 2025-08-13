@@ -62,16 +62,11 @@ const TransferPage = () => {
           </div>
           <div className="category-card" onClick={() => navigate("/chatbot")}>
             <img src={chatbotImg} alt="AI 챗봇" className="category-image" />
-            <div className="category-label">AI 챗봇</div>
+            <div className="category-label">글쓰기</div>
           </div>
         </div>
 
         {/* 필터 + More */}
-        <div className="filter-buttons">
-          <button>건물명</button>
-          <button>날짜</button>
-          <button>금액</button>
-        </div>
         <button
           type="button"
           className={`more-btn ${canLoadMore ? "" : "disabled"}`}

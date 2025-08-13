@@ -1,7 +1,7 @@
 /* 메인과 충돌 방지: 페이지 스코프 .lodging-page 사용 */
 .lodging-page { position: relative; }
 
-/* ===== 카테고리 (메인 위치/크기와 동일하게 보이도록) ===== */
+/* ===== 카테고리 ===== */
 .lodging-page .category-wrapper {
   position: absolute;
   top: 684px;
@@ -10,54 +10,64 @@
   gap: 100px;
   z-index: 2;
 }
-
-/* mainpage.css의 .category-card { position:absolute } 를 무력화 */
 .lodging-page .category-card {
-  position: static !important;   /* ✨ 절대배치 해제 */
-  width: 287px;
-  height: 302px;
+  position: static !important;
+  width: 287px; height: 302px;
   border-radius: 88px;
   text-align: center;
-  background-color: #E5E5E5;     /* 기본색(비활성) */
+  background-color: #E5E5E5;
   cursor: pointer;
   transition: transform .2s ease;
   border: 1.5px solid #000;
 }
 .lodging-page .category-card:hover { transform: scale(1.05); }
-.lodging-page .category-card.active { background-color: #D4E4E1; } /* 숙박 활성색 */
-
+.lodging-page .category-card.active { background-color: #D4E4E1; }
 .lodging-page .category-image {
-  margin-top: 82px;
-  width: 110px;
-  height: 110px;
-  object-fit: contain;
+  margin-top: 82px; width: 110px; height: 110px; object-fit: contain;
 }
-.lodging-page .category-label {
-  margin-top: 10px;
-  font-size: 24px;
-  letter-spacing: 3.36px;
-  font-family: "Inter", sans-serif;
-}
+.lodging-page .category-label { margin-top: 10px; font-size: 24px; letter-spacing: 3.36px; font-family: "Inter", sans-serif; }
 
-/* ===== 필터 / More ===== */
-.lodging-page .filter-buttons {
+/* ===== 필터 바 ===== */
+.lodging-page .filter-bar {
   position: absolute;
   top: 1060px;
   left: 87px;
   display: flex;
   gap: 10px;
+  align-items: center;
   z-index: 2;
-}
-.lodging-page .filter-buttons button {
-  border: 1.5px solid #000;
-  border-radius: 38px;
-  padding: 6px 20px;
-  font-size: 14px;
-  font-family: "Inter", sans-serif;
-  background: #fff;
-  cursor: pointer;
+  flex-wrap: wrap;
 }
 
+.lodging-page .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #000;
+  border-radius: 38px;
+  padding: 6px 14px;
+  background: #fff;
+  font-family: "Inter", sans-serif;
+}
+.lodging-page .chip input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  width: 120px;
+}
+.lodging-page .chip .chip-label { font-size: 14px; }
+.lodging-page .chip.date-chip input { width: 145px; }
+.lodging-page .chip .tilde { opacity: .6; }
+.lodging-page .chip .won { font-size: 13px; opacity: .8; }
+
+.lodging-page .clear-chip {
+  cursor: pointer;
+  transition: opacity .15s ease;
+}
+.lodging-page .clear-chip:hover { opacity: .7; }
+
+/* ===== More 버튼 ===== */
 .lodging-page .more-btn {
   position: absolute;
   top: 1060px;
@@ -71,11 +81,7 @@
   cursor: pointer;
   z-index: 2;
 }
-.lodging-page .more-btn.disabled {
-  opacity: .4;
-  pointer-events: none;
-  cursor: default;
-}
+.lodging-page .more-btn.disabled { opacity: .4; pointer-events: none; cursor: default; }
 
 /* ===== 숙박 리스트 ===== */
 .lodging-page .lodging-list {
@@ -89,29 +95,25 @@
 }
 .lodging-page .lodging-card { text-align: center; }
 .lodging-page .lodging-image {
-  width: 287px;
-  height: 302px;
-  object-fit: cover;
-  border-radius: 49px;
-  background: rgba(72, 72, 72, 0.35);
+  width: 287px; height: 302px; object-fit: cover;
+  border-radius: 49px; background: rgba(72, 72, 72, 0.35);
 }
-.lodging-page .lodging-text {
-  margin-top: 8px;
-  font-size: 16px;
+.lodging-page .lodging-text { margin-top: 8px; font-size: 16px; font-family: "Inter", sans-serif; }
+
+.lodging-page .empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 24px 0;
+  color: #666;
   font-family: "Inter", sans-serif;
 }
 
-/* ===== 푸터(겹침 방지) ===== */
-/* top 값은 JSX에서 동적으로 보정 */
+/* ===== 푸터 ===== */
 .lodging-page .footer-text {
   position: absolute;
   left: 543px;
   text-align: center;
-  font-size: 24px;
-  letter-spacing: 3.36px;
+  font-size: 24px; letter-spacing: 3.36px;
   font-family: "Inter", sans-serif;
 }
-.lodging-page .footer-sub {
-  font-size: 12px;
-  line-height: 1.3;
-}
+.lodging-page .footer-sub { font-size: 12px; line-height: 1.3; }
