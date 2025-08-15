@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";
 import "../styles/LodgingPage.css";
-import search from "../image/search.png";
+/* import search from "../image/search.png";  // ⛔️ 메인처럼 토글 버튼으로 바꿔서 사용 안 함 */
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import chatbotImg from "../image/image32.png";
@@ -28,12 +28,43 @@ const overlap = (aStart, aEnd, bStart, bEnd) =>
 const LodgingPage = () => {
   const navigate = useNavigate();
 
+  /* ── 🔎 메인페이지와 동일한 검색 토글/폼 상태 ── */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef(null);
+  const searchBtnRef = useRef(null);
+
+  const toggleSearch = () => {
+    setSearchOpen((v) => {
+      const next = !v;
+      setTimeout(() => next && inputRef.current?.focus(), 0);
+      return next;
+    });
+  };
+  const submitSearch = () => {
+    const q = query.trim();
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+  };
+  // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!searchOpen) return;
+      const form = document.getElementById("lodgingpage-top-search-form");
+      if (!form?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
+        setSearchOpen(false);
+        searchBtnRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [searchOpen]);
+
   // ====== 필터 상태 ======
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [minPrice, setMinPrice] = useState(""); // ✅ 최소 금액
-  const [maxPrice, setMaxPrice] = useState(""); // ✅ 최대 금액
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const clearFilters = () => { setQ(""); setFrom(""); setTo(""); setMinPrice(""); setMaxPrice(""); };
 
   // 검색어 디바운스
@@ -65,7 +96,6 @@ const LodgingPage = () => {
   // ====== More+ 페이지네이션 ======
   const PAGE_SIZE = 6;
   const [visible, setVisible] = useState(PAGE_SIZE);
-
   useEffect(() => setVisible(PAGE_SIZE), [debouncedQ, from, to, minPrice, maxPrice]);
 
   const visibleList = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
@@ -74,40 +104,63 @@ const LodgingPage = () => {
 
   // ====== 리스트 실제 높이에 맞춰 푸터 위치 조정 ======
   const listRef = useRef(null);
-  const [footerTop, setFooterTop] = useState(1667); // 초기 대략치
-
+  const [footerTop, setFooterTop] = useState(1667);
   useEffect(() => {
     const calc = () => {
       const el = listRef.current;
       if (!el) return;
-      const top = el.offsetTop || 0;        // 리스트의 상단(top)
-      const height = el.offsetHeight || 0;  // 리스트 실제 높이
-      const margin = 60;                    // 리스트와 푸터 간격
+      const top = el.offsetTop || 0;
+      const height = el.offsetHeight || 0;
+      const margin = 60;
       setFooterTop(top + height + margin);
     };
-
-    calc(); // 최초
-    // 이미지 로딩 후에도 재계산
+    calc();
     const imgs = listRef.current?.querySelectorAll("img") || [];
     imgs.forEach(img => { if (!img.complete) img.addEventListener("load", calc, { once: true }); });
     window.addEventListener("resize", calc);
     const id = setTimeout(calc, 0);
-    return () => {
-      window.removeEventListener("resize", calc);
-      clearTimeout(id);
-    };
-  }, [visibleList.length]); // More로 카드 수 변할 때마다
+    return () => { window.removeEventListener("resize", calc); clearTimeout(id); };
+  }, [visibleList.length]);
 
   return (
     <div className="screen">
       <div className="container lodging-page">
-        {/* 우측 상단 검색 아이콘 (기존 고정) */}
-        <img
-          src={search}
-          alt="search"
-          className="search-icon"
-          onClick={() => navigate("/search")}
-        />
+        {/* 🔎 우측 상단 검색(메인과 동일) */}
+        <div className="top-search">
+          <button
+            ref={searchBtnRef}
+            className="top-search__toggle"
+            onClick={toggleSearch}
+            aria-expanded={searchOpen}
+            aria-controls="lodgingpage-top-search-form"
+            type="button"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" fill="none" />
+              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <span className="top-search__label">검색</span>
+          </button>
+
+          <form
+            id="lodgingpage-top-search-form"
+            role="search"
+            className={`top-search__form ${searchOpen ? "is-open" : ""}`}
+            aria-hidden={!searchOpen}
+            onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+          >
+            <input
+              ref={inputRef}
+              className="top-search__input"
+              placeholder="원룸/건물명 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="검색어 입력"
+              tabIndex={searchOpen ? 0 : -1}
+              onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+            />
+          </form>
+        </div>
 
         {/* 공용 헤더 */}
         <Header />
@@ -130,7 +183,7 @@ const LodgingPage = () => {
 
         {/* ===== 필터 바 + More ===== */}
         <div className="filter-bar">
-          {/* 건물명 */}
+          {/* (이하 원본 그대로) */}
           <div className="chip input-chip">
             <span className="chip-label">건물명</span>
             <input
@@ -139,16 +192,12 @@ const LodgingPage = () => {
               placeholder="예: ○○빌라"
             />
           </div>
-
-          {/* 날짜 */}
           <div className="chip date-chip">
             <span className="chip-label">날짜</span>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <span className="tilde">~</span>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
-
-          {/* 금액: 최소 ~ 최대 */}
           <div className="chip input-chip">
             <span className="chip-label">금액</span>
             <input
@@ -200,7 +249,7 @@ const LodgingPage = () => {
           )}
         </div>
 
-        {/* 푸터: 리스트 높이에 맞춰 자동 이동 (absolute 유지) */}
+        {/* 푸터 */}
         <div className="footer-text" style={{ top: `${footerTop}px` }}>
           FIT ROOM<br />
           <span className="footer-sub">_Finding a house that suits me</span>

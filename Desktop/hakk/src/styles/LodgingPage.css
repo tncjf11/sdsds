@@ -1,6 +1,55 @@
 /* 메인과 충돌 방지: 페이지 스코프 .lodging-page 사용 */
 .lodging-page { position: relative; }
 
+/* ===== 🔎 우측 상단 검색(메인페이지 동일 스타일) ===== */
+.lodging-page .top-search {
+  position: absolute;
+  top: 58px;
+  right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+}
+.lodging-page .top-search__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+}
+.lodging-page .top-search__toggle svg { color: #fff; }
+.lodging-page .top-search__label { line-height: 1; }
+
+.lodging-page .top-search__form {
+  width: 0;
+  overflow: hidden;
+  transition: width .25s ease, border-bottom-color .25s ease;
+  border-bottom: 1px solid transparent;
+}
+.lodging-page .top-search__form.is-open {
+  width: 280px;
+  border-bottom: 1px solid #000;
+}
+.lodging-page .top-search__input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  padding: 4px 2px 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lodging-page .top-search__form { transition: none; }
+}
+
 /* ===== 카테고리 ===== */
 .lodging-page .category-wrapper {
   position: absolute;

@@ -1,6 +1,56 @@
 /* 메인/숙박과 충돌 방지: 페이지 스코프 .transfer-page 사용 */
 .transfer-page { position: relative; }
 
+/* ===== 🔎 검색 버튼(메인페이지 동일 스타일) ===== */
+.transfer-page .top-search {
+  position: absolute;
+  top: 58px;
+  right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+}
+.transfer-page .top-search__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+}
+.transfer-page .top-search__toggle svg { color: #fff; }
+.transfer-page .top-search__label { line-height: 1; }
+
+.transfer-page .top-search__form {
+  width: 0;
+  overflow: hidden;
+  transition: width .25s ease, border-bottom-color .25s ease;
+  border-bottom: 1px solid transparent;
+}
+.transfer-page .top-search__form.is-open {
+  width: 280px;
+  border-bottom: 1px solid #000;
+}
+.transfer-page .top-search__input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  padding: 4px 2px 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transfer-page .top-search__form { transition: none; }
+}
+
 /* ===== 카테고리 (메인 위치/크기와 동일) ===== */
 .transfer-page .category-wrapper {
   position: absolute;
@@ -13,18 +63,17 @@
 
 /* mainpage.css의 .category-card { position:absolute } 무력화 */
 .transfer-page .category-card {
-  position: static !important;       /* ✨ 절대배치 해제 */
+  position: static !important;
   width: 287px;
   height: 302px;
   border-radius: 88px;
   text-align: center;
-  background-color: #E5E5E5;         /* 기본색(숙박톤) */
+  background-color: #E5E5E5;
   cursor: pointer;
   transition: transform .2s ease;
   border: 1.5px solid #000;
 }
 .transfer-page .category-card:hover { transform: scale(1.05); }
-/* ✨ 양도 활성: 핑크 톤 */
 .transfer-page .category-card.active { background-color: #EFD7E4; }
 
 .transfer-page .category-image {
@@ -102,8 +151,7 @@
   font-family: "Inter", sans-serif;
 }
 
-/* ===== 푸터(겹침 방지) ===== */
-/* top 값은 JSX(useEffect)에서 리스트 높이에 맞게 동적으로 설정 */
+/* ===== 푸터 ===== */
 .transfer-page .footer-text {
   position: absolute;
   left: 543px;

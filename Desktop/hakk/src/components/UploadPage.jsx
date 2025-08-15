@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/mainpage.css";
 import "../styles/UploadPage.css";
 
 import house from "../image/house.png";
-import search from "../image/search.png";
+/* import search from "../image/search.png";  // ⛔️ 메인과 동일한 SVG 버튼 사용이라 필요없어 주석 */
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import uploadImg from "../image/image32.png";
@@ -35,6 +35,37 @@ const UploadPage = () => {
   const [pin, setPin] = useState("");
   const [uploadType, setUploadType] = useState("transfer");
 
+  // 🔎 메인/숙박/양도와 동일한 검색 상태 & 로직
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef(null);
+  const searchBtnRef = useRef(null);
+
+  const toggleSearch = () => {
+    setSearchOpen((v) => {
+      const next = !v;
+      setTimeout(() => next && inputRef.current?.focus(), 0);
+      return next;
+    });
+  };
+  const submitSearch = () => {
+    const q = query.trim();
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+  };
+  // 바깥 클릭 시 닫기 + 포커스 복귀
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!searchOpen) return;
+      const form = document.getElementById("uploadpage-top-search-form");
+      if (!form?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
+        setSearchOpen(false);
+        searchBtnRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [searchOpen]);
+
   const onPickImage = () => fileInputRef.current?.click();
   const onFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -46,28 +77,60 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="screen upload-page">  {/* 여기 .screen 추가 */}
+    <div className="screen upload-page">
       <div className="container">
-        <div
-          className="search-button"
-          role="button"
-          tabIndex={0}
-          onClick={() => navigate("/search")}
-        >
-          <div className="search-label"></div>
+        {/* 🔎 우측 상단 검색 (메인과 동일한 버튼+폼) */}
+        <div className="top-search">
+          <button
+            ref={searchBtnRef}
+            className="top-search__toggle"
+            onClick={toggleSearch}
+            aria-expanded={searchOpen}
+            aria-controls="uploadpage-top-search-form"
+            type="button"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" fill="none" />
+              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <span className="top-search__label">검색</span>
+          </button>
+
+          <form
+            id="uploadpage-top-search-form"
+            role="search"
+            className={`top-search__form ${searchOpen ? "is-open" : ""}`}
+            aria-hidden={!searchOpen}
+            onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+          >
+            <input
+              ref={inputRef}
+              className="top-search__input"
+              placeholder="원룸/건물명 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="검색어 입력"
+              tabIndex={searchOpen ? 0 : -1}
+              onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+            />
+          </form>
         </div>
-        <img
-          src={search}
-          alt="search"
-          className="search-icon"
-          onClick={() => navigate("/search")}
-        />
 
         <div className="header">
           <h1 className="main-title">
             FIT ROOM<br />_Finding <br /> a house that suits me
           </h1>
-          <img src={house} alt="house" className="house-image" />
+          {/* 🏠 홈 이미지 클릭 → 메인 이동 */}
+          <img
+            src={house}
+            alt="house"
+            className="house-image"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
 
         <div className="category-wrapper">

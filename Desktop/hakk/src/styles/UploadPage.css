@@ -24,9 +24,7 @@
 
 .upload-page .category-wrapper .category-card.active { background-color: #F3E1CB; }
 
-.category-wrapper .category-card:hover {
-  transform: scale(1.05);
-}
+.category-wrapper .category-card:hover { transform: scale(1.05); }
 
 .category-wrapper .category-image {
   margin-top: 82px;
@@ -42,7 +40,9 @@
   font-family: "Inter", sans-serif;
 }
 
-/* 태그 그룹 */
+/* =========================
+   태그 그룹
+   ========================= */
 .tag-group {
   position: absolute;
   top: 575px;
@@ -50,7 +50,6 @@
   display: flex;
   gap: 8px;
 }
-
 .tag {
   padding: 6px 16px;
   font-size: 14px;
@@ -58,41 +57,27 @@
   border-radius: 38px;
   white-space: nowrap;
 }
-
-.tag-outline {
-  border: 1.5px solid #000;
-}
-
-.tag-outline-white {
-  border: 1.5px solid #000;
-  background-color: #fff;
-}
-
-.tag-filled {
-  background-color: #000;
-  color: #fff;
-}
+.tag-outline { border: 1.5px solid #000; }
+.tag-outline-white { border: 1.5px solid #000; background-color: #fff; }
+.tag-filled { background-color: #000; color: #fff; }
 
 /* =========================
-   업로드 페이지
+   업로드 페이지 레이아웃
    ========================= */
-.upload-page .container {
-  padding-top: 990px;
-}
+.upload-page .container { padding-top: 990px; }
 
-/* 중앙 정렬 수정 */
+/* 중앙 정렬 */
 .upload-page .upload-inner {
   max-width: 1120px;
-  margin: 120px auto 0;       /* auto로 좌우 균등 → 중앙 정렬 */
+  margin: 120px auto 0;
   padding-bottom: 40px;
 }
-
 .upload-page .upload-grid {
   display: grid;
   grid-template-columns: 1fr 1.1fr;
   gap: 48px;
   align-items: flex-start;
-  justify-content: center;    /* ✅ 중앙 정렬 */
+  justify-content: center;
 }
 
 /* 탭 */
@@ -101,7 +86,6 @@
   gap: 10px;
   margin: 0 0 12px 8px;
 }
-
 .upload-page .tab {
   padding: 9px 18px;
   border-radius: 999px;
@@ -113,17 +97,8 @@
   letter-spacing: .2px;
 }
 .upload-page .tab:hover { opacity: .9; }
-
-.upload-page .tab.tab--active {
-  background: #000;
-  color: #fff;
-}
-
-.upload-page .tab.tab--ghost {
-  background: #fff;
-  color: #000;
-  border: 1.5px solid #000;
-}
+.upload-page .tab.tab--active { background: #000; color: #fff; }
+.upload-page .tab.tab--ghost { background: #fff; color: #000; border: 1.5px solid #000; }
 
 /* 좌측 카드 */
 .upload-page .upload-card {
@@ -145,20 +120,14 @@
   justify-content: center;
   z-index: 3;
 }
-.upload-page .upload-card__shadow {
-  position: absolute;
-  inset: 0;
-  border-radius: 36px;
-}
+.upload-page .upload-card__shadow { position: absolute; inset: 0; border-radius: 36px; }
 .upload-page .shadow--1 { background:#9b9b9b; transform: translate(14px,12px); z-index:1; }
 .upload-page .shadow--2 { background:#bdbdbd; transform: translate(24px,20px); z-index:0; }
-
 .upload-page .plus { font-size: 72px; color: #fff; line-height: 1; }
 .upload-page .upload-preview { width:100%; height:100%; object-fit:cover; border-radius:36px; }
 
 /* 우측 폼 */
 .upload-page .upload-form { padding-top: 12px; }
-
 .upload-page .title-line { margin-bottom: 18px; }
 .upload-page .title-input {
   width: 100%;
@@ -170,9 +139,7 @@
   outline: none;
 }
 .upload-page .title-input::placeholder { color: #b0b0b0; }
-.upload-page .underline {
-  height: 2px; width: 90%; margin: 8px auto 0; background: #000;
-}
+.upload-page .underline { height: 2px; width: 90%; margin: 8px auto 0; background: #000; }
 
 /* 칩 입력 */
 .upload-page .chips {
@@ -194,13 +161,8 @@
   border-radius: 999px;
   outline: none;
 }
-.upload-page .chip-input::placeholder {
-  color: #777;
-  font-weight: 500;
-}
-.upload-page .chip-input:focus {
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
-}
+.upload-page .chip-input::placeholder { color: #777; font-weight: 500; }
+.upload-page .chip-input:focus { box-shadow: 0 0 0 2px rgba(0,0,0,0.08); }
 
 /* 요약 라인 */
 .upload-page .summary.summary--form {
@@ -258,3 +220,55 @@
   font-weight:700;
 }
 .upload-page .upload-btn:hover { opacity:.92; }
+
+/* =========================
+   🔎 검색 버튼(메인/숙박/양도와 동일)
+   ========================= */
+.upload-page .top-search {
+  position: absolute;
+  top: 58px;
+  right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+}
+.upload-page .top-search__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+}
+.upload-page .top-search__toggle svg { color: #fff; }
+.upload-page .top-search__label { line-height: 1; }
+
+.upload-page .top-search__form {
+  width: 0;
+  overflow: hidden;
+  transition: width .25s ease, border-bottom-color .25s ease;
+  border-bottom: 1px solid transparent;
+}
+.upload-page .top-search__form.is-open {
+  width: 280px;
+  border-bottom: 1px solid #000;
+}
+.upload-page .top-search__input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  padding: 4px 2px 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-page .top-search__form { transition: none; }
+}
