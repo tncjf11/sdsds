@@ -1,10 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Header from "./Header";
 import "../styles/mainpage.css";
 import "../styles/UploadPage.css";
 
 import house from "../image/house.png";
-/* import search from "../image/search.png";  // ⛔️ 메인과 동일한 SVG 버튼 사용이라 필요없어 주석 */
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import uploadImg from "../image/image32.png";
@@ -23,19 +23,13 @@ export const TagGroup = () => (
   </div>
 );
 
+// 백엔드 베이스 URL (.env에 REACT_APP_API_BASE 설정 가능)
+//const API_BASE = process.env.REACT_APP_API_BASE ?? "http://localhost:5000";
+
 const UploadPage = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null);
-  const [building, setBuilding] = useState("");
-  const [address, setAddress] = useState("");
-  const [price, setPrice] = useState("");
-  const [period, setPeriod] = useState("");
-  const [content, setContent] = useState("");
-  const [pin, setPin] = useState("");
-  const [uploadType, setUploadType] = useState("transfer");
 
-  // 🔎 메인/숙박/양도와 동일한 검색 상태 & 로직
+  // ====== 🔎 메인/숙박과 동일한 검색 토글/폼 상태 ======
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -52,7 +46,8 @@ const UploadPage = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
-  // 바깥 클릭 시 닫기 + 포커스 복귀
+
+  // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
@@ -66,20 +61,45 @@ const UploadPage = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
+  // ===== 이미지 업로드(미리보기) =====
+  const fileInputRef = useRef(null);
+  const [preview, setPreview] = useState(null);
   const onPickImage = () => fileInputRef.current?.click();
   const onFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (preview) URL.revokeObjectURL(preview);
     setPreview(URL.createObjectURL(file));
   };
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  // ===== 탭: transfer | lodging =====
+  const [activeTab, setActiveTab] = useState("transfer");
+
+  const [forms, setForms] = useState({
+    transfer: { building: "", content: "", pin: "", address: "", price: "", period: "" },
+    lodging:  { building: "", content: "", pin: "", date: "", people: "", amount: "", address: "" },
+  });
+  const form = forms[activeTab];
+
+  const onFormChange = (field) => (e) => {
+    const value = e.target.value;
+    setForms((prev) => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], [field]: value },
+    }));
+  };
+
   const onUpload = () => {
+    const payload = { type: activeTab, ...forms[activeTab] };
+    console.log("upload payload:", payload);
     alert("업로드 완료(목업)!");
   };
 
   return (
     <div className="screen upload-page">
       <div className="container">
-        {/* 🔎 우측 상단 검색 (메인과 동일한 버튼+폼) */}
+        {/* 🔎 우측 상단 검색 (메인/숙박 동일 UI/동작) */}
         <div className="top-search">
           <button
             ref={searchBtnRef}
@@ -116,23 +136,25 @@ const UploadPage = () => {
           </form>
         </div>
 
+        {/* 공용 헤더 + 홈 이미지 클릭 시 메인으로 이동 */}
+        <Header />
         <div className="header">
           <h1 className="main-title">
             FIT ROOM<br />_Finding <br /> a house that suits me
           </h1>
-          {/* 🏠 홈 이미지 클릭 → 메인 이동 */}
           <img
             src={house}
             alt="house"
             className="house-image"
+            style={{ cursor: "pointer" }}
             role="button"
             tabIndex={0}
             onClick={() => navigate("/")}
-            onKeyDown={(e) => e.key === "Enter" && navigate("/")}
-            style={{ cursor: "pointer" }}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate("/")}
           />
         </div>
 
+        {/* 카테고리 */}
         <div className="category-wrapper">
           <div className="category-card" onClick={() => navigate("/lodging")}>
             <img src={lodgingImg} alt="숙박" className="category-image" />
@@ -148,41 +170,37 @@ const UploadPage = () => {
           </div>
         </div>
 
+        {/* 요약/태그 */}
         <div className="summary-box">
           <div className="summary-check">Check out</div>
           <p className="summary-text">your home at a glance,</p>
         </div>
         <TagGroup />
 
+        {/* 본문: 업로드 폼 */}
         <section className="upload-inner">
+          {/* 탭 */}
           <div className="upload-tabs">
             <button
               type="button"
-              className={`tab ${uploadType === "transfer" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setUploadType("transfer")}
-              aria-pressed={uploadType === "transfer"}
+              className={`tab ${activeTab === "transfer" ? "tab--active" : "tab--ghost"}`}
+              onClick={() => setActiveTab("transfer")}
+              aria-pressed={activeTab === "transfer"}
             >
               양도
             </button>
             <button
               type="button"
-              className={`tab ${uploadType === "lodging" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setUploadType("lodging")}
-              aria-pressed={uploadType === "lodging"}
+              className={`tab ${activeTab === "lodging" ? "tab--active" : "tab--ghost"}`}
+              onClick={() => setActiveTab("lodging")}
+              aria-pressed={activeTab === "lodging"}
             >
               숙박
-            </button>
-            <button
-              type="button"
-              className={`tab ${uploadType === "ai" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setUploadType("ai")}
-              aria-pressed={uploadType === "ai"}
-            >
-              AI 글수정
             </button>
           </div>
 
           <div className="upload-grid">
+            {/* 좌: 이미지 카드 */}
             <div className="upload-card" onClick={onPickImage} role="button" tabIndex={0}>
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
@@ -202,68 +220,115 @@ const UploadPage = () => {
               </div>
             </div>
 
+            {/* 우: 폼 */}
             <div className="upload-form">
+              {/* 제목 */}
               <div className="title-line">
                 <input
                   className="title-input"
                   placeholder="건물명"
-                  value={building}
-                  onChange={(e) => setBuilding(e.target.value)}
+                  value={form.building ?? ""}
+                  onChange={onFormChange("building")}
                 />
                 <div className="underline" />
               </div>
 
-              <div className="chips">
-                <input
-                  className="chip-input"
-                  type="text"
-                  placeholder="주소"
-                  aria-label="주소"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-                <input
-                  className="chip-input"
-                  type="text"
-                  placeholder="가격 (예: 150만원)"
-                  aria-label="가격"
-                  inputMode="numeric"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-                <input
-                  className="chip-input"
-                  type="text"
-                  placeholder="기간 (예: 바로입주 / 11.2~11.5)"
-                  aria-label="기간"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                />
+              {/* 칩 영역 */}
+              <div className={`chips ${activeTab === "lodging" ? "is-lodging" : "is-transfer"}`}>
+                {activeTab === "lodging" ? (
+                  <>
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="날짜 (예: 11.2 ~ 11.5)"
+                      value={form.date ?? ""}
+                      onChange={onFormChange("date")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="인원수 (예: 2명)"
+                      value={form.people ?? ""}
+                      onChange={onFormChange("people")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="금액 (예: 50만원)"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={form.amount ?? ""}
+                      onChange={onFormChange("amount")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="주소"
+                      value={form.address ?? ""}
+                      onChange={onFormChange("address")}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="주소"
+                      value={form.address ?? ""}
+                      onChange={onFormChange("address")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="가격 (예: 150만원)"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={form.price ?? ""}
+                      onChange={onFormChange("price")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="기간 (예: 바로입주 / 11.2~11.5)"
+                      value={form.period ?? ""}
+                      onChange={onFormChange("period")}
+                    />
+                  </>
+                )}
               </div>
 
+              {/* 요약 */}
               <div className="summary summary--form">
-                {(address || price || period)
-                  ? `${address || ""} / ${price || ""} / ${period || ""}`
+                {activeTab === "lodging"
+                  ? form.date || form.people || form.amount || form.address
+                    ? `${form.date || ""} / ${form.people || ""} / ${form.amount || ""} / ${form.address || ""}`
+                    : "11.2~11.5 / 2명 / 50만원 / ○○빌라"
+                  : form.address || form.price || form.period
+                  ? `${form.address || ""} / ${form.price || ""} / ${form.period || ""}`
                   : "○○빌라 / 150만원 / 바로입주"}
               </div>
 
+              {/* 본문 */}
               <div className="editor">
                 <textarea
                   className="editor-area"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  value={form.content ?? ""}
+                  onChange={onFormChange("content")}
                   placeholder="글쓰기 / 고객과의 컨택을 위한 연락처를 남겨주세요!"
                 />
               </div>
 
+              {/* 하단 버튼 */}
               <div className="bottom-actions">
                 <div className="pin-wrap">
                   <label className="pin-label">PIN</label>
                   <input
                     className="pin-input"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
+                    value={form.pin ?? ""}
+                    onChange={onFormChange("pin")}
                     maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                   />
                 </div>
                 <button className="upload-btn" onClick={onUpload}>업로드</button>
