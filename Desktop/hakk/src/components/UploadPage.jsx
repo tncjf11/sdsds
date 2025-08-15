@@ -24,7 +24,7 @@ export const TagGroup = () => (
 );
 
 // 백엔드 베이스 URL (.env에 REACT_APP_API_BASE 설정 가능)
-//const API_BASE = process.env.REACT_APP_API_BASE ?? "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_API_BASE ?? "http://localhost:5000";
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -46,7 +46,6 @@ const UploadPage = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
-
   // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
   useEffect(() => {
     const onDocMouseDown = (e) => {
@@ -73,12 +72,14 @@ const UploadPage = () => {
   };
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
-  // ===== 탭: transfer | lodging =====
+  // ===== 탭: transfer | lodging | ai =====
   const [activeTab, setActiveTab] = useState("transfer");
+  const [aiBusy, setAiBusy] = useState(false);
 
   const [forms, setForms] = useState({
     transfer: { building: "", content: "", pin: "", address: "", price: "", period: "" },
     lodging:  { building: "", content: "", pin: "", date: "", people: "", amount: "", address: "" },
+    ai:       { content: "" }, // AI 글수정: 본문만 사용
   });
   const form = forms[activeTab];
 
@@ -94,6 +95,41 @@ const UploadPage = () => {
     const payload = { type: activeTab, ...forms[activeTab] };
     console.log("upload payload:", payload);
     alert("업로드 완료(목업)!");
+  };
+
+  async function postJSON(path, body) {
+    const resp = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const msg = await resp.text().catch(() => "");
+      throw new Error(`HTTP ${resp.status} ${resp.statusText} - ${msg}`);
+    }
+    return resp.json();
+  }
+
+  const onAiRewrite = async () => {
+    const content = forms[activeTab].content ?? "";
+    if (!content.trim()) {
+      alert("본문이 비어 있어요. 먼저 내용을 입력해 주세요.");
+      return;
+    }
+    setAiBusy(true);
+    try {
+      const data = await postJSON("/ai/rewrite", { type: activeTab, content });
+      const improved = data?.content ?? "";
+      setForms((prev) => ({
+        ...prev,
+        [activeTab]: { ...prev[activeTab], content: improved },
+      }));
+    } catch (e) {
+      console.error(e);
+      alert("AI 글쓰기 실패: " + e.message);
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   return (
@@ -154,7 +190,7 @@ const UploadPage = () => {
           />
         </div>
 
-        {/* 카테고리 */}
+        {/* 카테고리 (숙박 페이지와 동일 구조) */}
         <div className="category-wrapper">
           <div className="category-card" onClick={() => navigate("/lodging")}>
             <img src={lodgingImg} alt="숙박" className="category-image" />
@@ -179,7 +215,7 @@ const UploadPage = () => {
 
         {/* 본문: 업로드 폼 */}
         <section className="upload-inner">
-          {/* 탭 */}
+          {/* 탭: 양도/숙박/AI 글수정 */}
           <div className="upload-tabs">
             <button
               type="button"
@@ -196,6 +232,14 @@ const UploadPage = () => {
               aria-pressed={activeTab === "lodging"}
             >
               숙박
+            </button>
+            <button
+              type="button"
+              className={`tab ${activeTab === "ai" ? "tab--active" : "tab--ghost"}`}
+              onClick={() => setActiveTab("ai")}
+              aria-pressed={activeTab === "ai"}
+            >
+              AI 글수정
             </button>
           </div>
 
@@ -233,73 +277,77 @@ const UploadPage = () => {
                 <div className="underline" />
               </div>
 
-              {/* 칩 영역 */}
-              <div className={`chips ${activeTab === "lodging" ? "is-lodging" : "is-transfer"}`}>
-                {activeTab === "lodging" ? (
-                  <>
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="날짜 (예: 11.2 ~ 11.5)"
-                      value={form.date ?? ""}
-                      onChange={onFormChange("date")}
-                    />
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="인원수 (예: 2명)"
-                      value={form.people ?? ""}
-                      onChange={onFormChange("people")}
-                    />
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="금액 (예: 50만원)"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={form.amount ?? ""}
-                      onChange={onFormChange("amount")}
-                    />
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="주소"
-                      value={form.address ?? ""}
-                      onChange={onFormChange("address")}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="주소"
-                      value={form.address ?? ""}
-                      onChange={onFormChange("address")}
-                    />
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="가격 (예: 150만원)"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={form.price ?? ""}
-                      onChange={onFormChange("price")}
-                    />
-                    <input
-                      className="chip-input"
-                      type="text"
-                      placeholder="기간 (예: 바로입주 / 11.2~11.5)"
-                      value={form.period ?? ""}
-                      onChange={onFormChange("period")}
-                    />
-                  </>
-                )}
-              </div>
+              {/* 칩 영역 - AI 탭이면 숨김 */}
+              {activeTab !== "ai" && (
+                <div className={`chips ${activeTab === "lodging" ? "is-lodging" : "is-transfer"}`}>
+                  {activeTab === "lodging" ? (
+                    <>
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="날짜 (예: 11.2 ~ 11.5)"
+                        value={form.date ?? ""}
+                        onChange={onFormChange("date")}
+                      />
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="인원수 (예: 2명)"
+                        value={form.people ?? ""}
+                        onChange={onFormChange("people")}
+                      />
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="금액 (예: 50만원)"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={form.amount ?? ""}
+                        onChange={onFormChange("amount")}
+                      />
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="주소"
+                        value={form.address ?? ""}
+                        onChange={onFormChange("address")}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="주소"
+                        value={form.address ?? ""}
+                        onChange={onFormChange("address")}
+                      />
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="가격 (예: 150만원)"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={form.price ?? ""}
+                        onChange={onFormChange("price")}
+                      />
+                      <input
+                        className="chip-input"
+                        type="text"
+                        placeholder="기간 (예: 바로입주 / 11.2~11.5)"
+                        value={form.period ?? ""}
+                        onChange={onFormChange("period")}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* 요약 */}
               <div className="summary summary--form">
-                {activeTab === "lodging"
+                {activeTab === "ai"
+                  ? "AI 글수정: 아래 본문을 입력하고 버튼을 눌러주세요."
+                  : activeTab === "lodging"
                   ? form.date || form.people || form.amount || form.address
                     ? `${form.date || ""} / ${form.people || ""} / ${form.amount || ""} / ${form.address || ""}`
                     : "11.2~11.5 / 2명 / 50만원 / ○○빌라"
@@ -320,18 +368,29 @@ const UploadPage = () => {
 
               {/* 하단 버튼 */}
               <div className="bottom-actions">
-                <div className="pin-wrap">
-                  <label className="pin-label">PIN</label>
-                  <input
-                    className="pin-input"
-                    value={form.pin ?? ""}
-                    onChange={onFormChange("pin")}
-                    maxLength={6}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                  />
-                </div>
-                <button className="upload-btn" onClick={onUpload}>업로드</button>
+                {activeTab === "ai" ? (
+                  <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
+                    {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
+                  </button>
+                ) : (
+                  <>
+                    <div className="pin-wrap">
+                      <label className="pin-label">PIN</label>
+                      <input
+                        className="pin-input"
+                        value={form.pin ?? ""}
+                        onChange={onFormChange("pin")}
+                        maxLength={6}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                      />
+                    </div>
+                    <button className="upload-btn" onClick={onUpload}>업로드</button>
+                    <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
+                      {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -346,4 +405,4 @@ const UploadPage = () => {
   );
 };
 
-export default UploadPage;
+export default UploadPage;  
