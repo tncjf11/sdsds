@@ -1,15 +1,17 @@
-/* 스코프 */
+/* =========================
+   SearchPage 전용 스코프
+   ========================= */
 .search-page .container {
   position: relative;
-  width: min(90%, 1280px);
-  min-height: 1200px; /* 900 → 1200 */
-  padding-top: 60px; /* 50 → 60 */
+  width: min(96%, 1440px);   /* 화면 넓을수록 여유 있게 */
+  margin: 0 auto;
+  padding-top: 60px;
 }
 
-/* 헤더 */
+/* ── 헤더 영역(상단 타이틀/집아이콘/검색바) ── */
 .search-page .header {
   position: relative;
-  height: 480px; /* 380 → 480 */
+  height: 520px;             /* 상단 영역 높이만 확보, 이후 섹션은 흐름으로 배치 */
 }
 
 .search-page .branding {
@@ -21,145 +23,134 @@
 .search-page .branding-text {
   font-family: "Inter", sans-serif;
   font-weight: 800;
-  font-size: clamp(28px, 3vw, 40px); /* 22/2.5vw/32 → 28/3vw/40 */
+  font-size: clamp(34px, 3.2vw, 50px);
   letter-spacing: 0.14em;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .search-page .house-icon {
   position: absolute;
   top: 0;
-  left: 250px;
-  width: 290px; /* 183 → 230 */
+  left: 260px;
+  width: 340px;
   height: auto;
 }
 
-/* 우측 상단 컨트롤: 버튼만 */
+/* 우측 상단 컨트롤 */
 .search-page .controls {
   position: absolute;
   top: 10px;
   right: 10px;
   display: inline-flex;
   align-items: center;
-  gap: 10px; /* 8 → 10 */
+  gap: 10px;
 }
-
 .search-page .search-top-btn {
   background: #000;
   color: #fff;
-  padding: 10px 26px; /* 6x20 → 10x26 */
+  padding: 10px 26px;
   border-radius: 38px;
-  font-size: 16px; /* 14 → 16 */
+  font-size: 16px;
   font-family: "Inter", sans-serif;
   cursor: pointer;
   border: 0;
   white-space: nowrap;
-  min-width: 140px; /* 120 → 140 */
+  min-width: 140px;
 }
 
-/* 혹시 남아 있을지 모를 상단 돋보기 강제 숨김(안전장치) */
-.search-page .sp-search-top-icon {
-  display: none !important;
-}
+/* 혹시 남은 상단 돋보기 강제 숨김(안전장치) */
+.search-page .sp-search-top-icon { display: none !important; }
 
-/* 검색바: 가운데 한 줄 */
+/* ── 가운데 검색바 ── */
 .search-page .search-bar {
   position: absolute;
-  top: 270px; /* 220 → 270 (헤더 커진 만큼 ↓) */
+  top: 300px;                      /* 헤더 내부에서만 절대배치 */
   left: 50%;
   transform: translateX(-50%);
-  width: min(70%, 700px); /* min(60%,560) → min(70%,700) */
+  width: min(80%, 960px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px; /* 10 → 14 */
-  border-bottom: 2px solid #000; /* 1px → 2px */
-  padding-bottom: 14px; /* 10 → 14 */
+  gap: 16px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 16px;
 }
-
-.search-page .sp-search-icon {
-  width: 40px;
-  height: 40px; /* 22 → 26 */
-}
-
-/* 입력창 */
+.search-page .sp-search-icon { width: 48px; height: 48px; }
 .search-page .search-input {
   width: 100%;
-  max-width: 560px; /* 460 → 560 */
   border: none;
   outline: none;
   background: transparent;
-  font-size: clamp(22px, 2.2vw, 34px); /* 18/2vw/28 → 22/2.2vw/34 */
+  font-size: clamp(26px, 2.6vw, 42px);
   letter-spacing: 0.14em;
   text-align: center;
 }
+.search-page .search-input::placeholder { opacity: .7; transition: opacity .15s ease; }
+.search-page .search-input:focus::placeholder { opacity: 0; }
 
-.search-page .search-input::placeholder {
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
-}
+/* =========================
+   본문(라벨 → 결과 그리드)
+   절대배치 제거: 콘텐츠 흐름대로 아래로 쌓임
+   ========================= */
 
-.search-page .search-input:focus::placeholder {
-  opacity: 0;
-}
-
-/* 라벨: 검색바와 충분한 간격(붙어 보이지 않게) */
+/* 라벨 */
 .search-page .section-label {
-  position: absolute;
-  top: 620px; /* 500 → 620 */
-  left: 12%;
+  margin: 40px 8% 12px;            /* 컨테이너 안쪽 좌우 여백 느낌 */
 }
-
 .search-page .label-chip {
-  background-color: #000;
+  background: #000;
   color: #fff;
   border-radius: 38px;
-  padding: 8px 18px; /* 6x16 → 8x18 */
-  font-size: 18px; /* 16 → 18 */
+  padding: 10px 20px;
+  font-size: 20px;
   font-family: "Inter", sans-serif;
+  display: inline-block;
 }
 
-/* 결과 카드 영역: 라벨을 따라 함께 ↓ */
+/* 결과 그리드: 화면 넓어지면 자동으로 열 수 증가 */
 .search-page .results {
-  position: absolute;
-  top: 690px; /* 560 → 690 */
-  left: 12%;
-  display: flex;
-  gap: 36px; /* 30 → 36 */
-  flex-wrap: wrap;
+  margin: 0 8%;                    /* 라벨과 정렬 맞춤 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 40px;
 }
-
 .search-page .result-card {
+  width: 100%;
   text-align: center;
-  width: 230px; /* 189 → 230 */
 }
-
 .search-page .result-thumbnail {
-  width: 230px; /* 189 → 230 */
+  width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 48px; /* 41 → 48 */
+  border-radius: 56px;
   background-color: rgba(72, 72, 72, 0.35);
 }
-
 .search-page .result-text {
-  margin-top: 18px; /* 16 → 18 */
-  font-size: 16px; /* 14 → 16 */
+  margin-top: 18px;
+  font-size: 18px;
   font-family: "Inter", sans-serif;
   color: #000;
 }
 
-/* 푸터 */
+/* =========================
+   푸터: 콘텐츠 길이에 따라 자동 하단으로 밀림
+   ========================= */
 .search-page .footer {
-  position: absolute;
-  bottom: 28px; /* 20 → 28 */
-  left: 50%;
-  transform: translateX(-50%);
   text-align: center;
   font-family: "Inter", sans-serif;
-  font-size: 28px; /* 24 → 28 */
-  letter-spacing: 3.6px; /* 3.36 → 약간 상향 */
+  font-size: 28px;
+  letter-spacing: 3.6px;
+  margin: 72px auto 28px;          /* 위로 여백만 주고, 위치는 흐름에 맡김 */
+}
+.search-page .footer-sub { font-size: 14px; }
+
+/* 접근성/모션 배려 */
+@media (prefers-reduced-motion: reduce) {
+  .search-page .search-bar { transition: none; }
 }
 
-.search-page .footer-sub {
-  font-size: 14px; /* 12 → 14 */
+/* 넓은 화면 살짝 더 키우고 싶다면 선택적으로 사용
+@media (min-width: 1680px) {
+  .search-page .container { width: min(94%, 1600px); }
+  .search-page .search-bar { width: min(76%, 1040px); }
 }
+*/
