@@ -15,8 +15,6 @@ const CARD_HW_RATIO = 302 / 287;
 
 /** 나중에 API로 대체할 수 있도록 분리(지금은 더미) */
 async function fetchTopListMock() {
-  // category: 'lodging'(숙박), 'transfer'(양도)
-  // score: 랭킹용(조회수/좋아요/신규도 등으로 산출 가정)
   return [
     { id: 1, label: "대곡빌라 / 150만원 / 바로입주", category: "lodging",  score: 98 },
     { id: 2, label: "강남오피스텔 / 90만원 / 2월입주", category: "lodging", score: 92 },
@@ -35,7 +33,6 @@ async function fetchTopListMock() {
 export default function MainPage() {
   const navigate = useNavigate();
 
-  /** Top List 데이터 (향후 업로드/백엔드 연동 지점) */
   const [allItems, setAllItems] = useState([]);
   useEffect(() => {
     let mounted = true;
@@ -43,10 +40,8 @@ export default function MainPage() {
     return () => { mounted = false; };
   }, []);
 
-  /** 카테고리 탭 상태: 'lodging'(숙박) | 'transfer'(양도) */
   const [activeCategory, setActiveCategory] = useState("lodging");
 
-  /** 검색 영역 */
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -63,9 +58,8 @@ export default function MainPage() {
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
 
-  /** ── 캐러셀: 섹션 폭 기준으로 카드 폭/높이 동적 계산 ── */
   const carouselRef = useRef(null);
-  const [cardW, setCardW] = useState(287); // 초기값
+  const [cardW, setCardW] = useState(287);
   const cardH = Math.round(cardW * CARD_HW_RATIO);
   const slideWidth = cardW + GAP;
 
@@ -73,8 +67,8 @@ export default function MainPage() {
     if (!carouselRef.current) return;
     const el = carouselRef.current;
     const compute = () => {
-      const total = el.clientWidth;                    // .carousel 실제 너비
-      const avail = Math.max(0, total - SIDE_PAD * 2); // 좌우 패딩 제외
+      const total = el.clientWidth;
+      const avail = Math.max(0, total - SIDE_PAD * 2);
       const nextW = Math.floor((avail - GAP * (VISIBLE - 1)) / VISIBLE);
       if (nextW > 0) setCardW(nextW);
     };
@@ -84,7 +78,6 @@ export default function MainPage() {
     return () => ro.disconnect();
   }, []);
 
-  /** 카테고리 필터 → 점수 내림차순 → 상위 5개 */
   const displayList = useMemo(() => {
     return allItems
       .filter((i) => i.category === activeCategory)
@@ -92,29 +85,36 @@ export default function MainPage() {
       .slice(0, 5);
   }, [allItems, activeCategory]);
 
-  /** 트랙 총 너비 */
   const trackWidth = useMemo(() => {
     if (!displayList.length) return 0;
     return displayList.length * cardW + (displayList.length - 1) * GAP;
   }, [displayList.length, cardW]);
 
-  /** 페이지 인덱스 (카테고리 바뀌면 0으로 리셋) */
   const [index, setIndex] = useState(0);
   useEffect(() => { setIndex(0); }, [activeCategory]);
 
-  const maxIndex = Math.max(0, Math.max(0, displayList.length - VISIBLE));
+  const maxIndex = Math.max(0, displayList.length - VISIBLE);
   const trackX = -(index * slideWidth);
 
   const goPrev = () => setIndex((i) => Math.max(0, i - 1));
   const goNext = () => setIndex((i) => Math.min(maxIndex, i + 1));
 
+  const goDetailFromMain = (item) => {
+    if (item.category === "lodging") {
+      navigate("/detaillodging", { state: { summary: item.label } });
+    } else {
+      navigate("/detailtransfer", { state: { summary: item.label } });
+    }
+  };
+
   return (
-    <div className="screen">
+    <div className="screen main-page">
       <div className="container">
         {/* 헤더 */}
         <div className="header">
           <h1 className="main-title">
-            FIT ROOM<br />_Finding<br />a house that suits me
+            FIT ROOM<br />_Finding<br />a house that suits
+            <br />me
           </h1>
           <img src={house} alt="" className="house-image" aria-hidden="true" />
         </div>
@@ -171,49 +171,44 @@ export default function MainPage() {
           </div>
         </div>
 
-        {/* 상단 3카테고리 카드 */}
-        <div
-          className="category-card"
-          style={{ left: 87, top: 684, backgroundColor: "#D4E4E1" }}
-          onClick={() => navigate("/lodging")}
-          role="button" tabIndex={0}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/lodging") : null)}
-        >
-          <img src={image19} alt="숙박" className="category-image" />
-          <div className="category-label">숙박</div>
-        </div>
-        <div
-          className="category-card"
-          style={{ left: 491, top: 684, backgroundColor: "#EFD7E4" }}
-          onClick={() => navigate("/transfer")}
-          role="button" tabIndex={0}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/transfer") : null)}
-        >
-          <img src={image21} alt="양도" className="category-image" />
-          <div className="category-label">양도</div>
-        </div>
-        <div
-          className="category-card"
-          style={{ left: 900, top: 684, backgroundColor: "#F3E1CB" }}
-          onClick={() => navigate("/chatbot")}
-          role="button" tabIndex={0}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/chatbot") : null)}
-        >
-          <img src={image32} alt="업로드" className="category-image" />
-          <div className="category-label">업로드</div>
+        {/* 상단 3카테고리 */}
+        <div className="category-wrapper">
+          <div
+            className="category-card"
+            onClick={() => navigate("/lodging")}
+            role="button" tabIndex={0}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/lodging") : null)}
+          >
+            <img src={image19} alt="숙박" className="category-image" />
+            <div className="category-label">숙박</div>
+          </div>
+
+          <div
+            className="category-card"
+            onClick={() => navigate("/transfer")}
+            role="button" tabIndex={0}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/transfer") : null)}
+          >
+            <img src={image21} alt="양도" className="category-image" />
+            <div className="category-label">양도</div>
+          </div>
+
+          <div
+            className="category-card"
+            onClick={() => navigate("/upload")}
+            role="button" tabIndex={0}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? navigate("/upload") : null)}
+          >
+            <img src={image32} alt="업로드" className="category-image" />
+            <div className="category-label">업로드</div>
+          </div>
         </div>
 
-        {/* ====== TopList 섹션: 라벨 → 탭 → 캐러셀 (흐름 레이아웃) ====== */}
+        {/* TopList 섹션 */}
         <section className="toplist-section">
-          {/* Top List 라벨 */}
           <div className="top-list-label">Top List</div>
 
-          {/* 탭(숙박/양도) */}
-          <div
-            className="toplist-tabs"
-            role="tablist"
-            aria-label="Top List Category Tabs"
-          >
+          <div className="toplist-tabs" role="tablist" aria-label="Top List Category Tabs">
             <button
               role="tab"
               aria-selected={activeCategory === "lodging"}
@@ -232,13 +227,7 @@ export default function MainPage() {
             </button>
           </div>
 
-          {/* 캐러셀 (Top5, 화살표 안쪽) */}
-          <div
-            ref={carouselRef}
-            className="carousel"
-            style={{ width: "100%" }}   // 섹션 폭을 그대로 사용
-          >
-            {/* 왼쪽 화살표: 컨테이너 안쪽 12px */}
+          <div ref={carouselRef} className="carousel" style={{ width: "100%" }}>
             <button
               className="carousel__nav is-left"
               onClick={goPrev}
@@ -270,6 +259,10 @@ export default function MainPage() {
                       marginRight: i === displayList.length - 1 ? 0 : GAP,
                       height: cardH + 40,
                     }}
+                    onClick={() => goDetailFromMain(item)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? goDetailFromMain(item) : null)}
                   >
                     <div className="carousel__thumb" style={{ height: cardH }}>
                       <div className="carousel__badge">{i + 1}</div>
@@ -280,12 +273,11 @@ export default function MainPage() {
               </div>
             </div>
 
-            {/* 오른쪽 화살표: 컨테이너 안쪽 12px */}
             <button
               className="carousel__nav is-right"
               onClick={goNext}
               aria-label="다음"
-              disabled={index === Math.max(0, displayList.length - VISIBLE)}
+              disabled={index === maxIndex}
               style={{ right: 12, transform: "none" }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -294,7 +286,6 @@ export default function MainPage() {
             </button>
           </div>
         </section>
-        {/* ====== /TopList 섹션 ====== */}
 
         {/* 푸터 */}
         <div className="footer-text">

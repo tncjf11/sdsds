@@ -129,14 +129,18 @@
 
 /* ===== 리스트 ===== */
 .transfer-page .transfer-list {
-  position: absolute;
-  top: 1120px;
-  left: 87px;
+  position: absolute;         /* absolute 유지 */
+  top: 1120px;                /* 기존 위치 값 그대로 */
+  left: 50%;                  /* 화면 가로 중앙 기준 */
+  transform: translateX(-50%);/* 자기 너비만큼 왼쪽으로 당겨서 진짜 중앙 배치 */
   display: grid;
-  grid-template-columns: repeat(3, 287px);
+  grid-template-columns: repeat(3, 287px);  /* 기존 3열 유지 */
   gap: 40px;
   z-index: 1;
+  /* 필요 시: width: max-content; */
 }
+
+
 .transfer-page .transfer-card { text-align: center; }
 .transfer-page .transfer-image {
   width: 287px;

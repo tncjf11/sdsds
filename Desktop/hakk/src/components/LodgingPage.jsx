@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";
 import "../styles/LodgingPage.css";
-/* import search from "../image/search.png";  // ⛔️ 메인처럼 토글 버튼으로 바꿔서 사용 안 함 */
+/* import search from "../image/search.png"; // ⛔️ 메인처럼 토글 버튼으로 바꿔서 사용 안 함 */
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import chatbotImg from "../image/image32.png";
@@ -41,16 +41,21 @@ const LodgingPage = () => {
       return next;
     });
   };
+
   const submitSearch = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
+
   // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
       const form = document.getElementById("lodgingpage-top-search-form");
-      if (!form?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
+      if (
+        !form?.contains(e.target) &&
+        !searchBtnRef.current?.contains(e.target)
+      ) {
         setSearchOpen(false);
         searchBtnRef.current?.focus();
       }
@@ -65,7 +70,14 @@ const LodgingPage = () => {
   const [to, setTo] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const clearFilters = () => { setQ(""); setFrom(""); setTo(""); setMinPrice(""); setMaxPrice(""); };
+
+  const clearFilters = () => {
+    setQ("");
+    setFrom("");
+    setTo("");
+    setMinPrice("");
+    setMaxPrice("");
+  };
 
   // 검색어 디바운스
   const [debouncedQ, setDebouncedQ] = useState(q);
@@ -80,14 +92,13 @@ const LodgingPage = () => {
       const okName =
         debouncedQ.trim() === "" ||
         s.name.toLowerCase().includes(debouncedQ.trim().toLowerCase());
-
       const okMin = minPrice === "" || s.price >= Number(minPrice);
       const okMax = maxPrice === "" || s.price <= Number(maxPrice);
 
       let okDate = true;
       if (from && to) okDate = overlap(from, to, s.from, s.to);
-      else if (from)  okDate = new Date(from) <= new Date(s.to);
-      else if (to)    okDate = new Date(s.from) <= new Date(to);
+      else if (from) okDate = new Date(from) <= new Date(s.to);
+      else if (to) okDate = new Date(s.from) <= new Date(to);
 
       return okName && okMin && okMax && okDate;
     });
@@ -96,15 +107,25 @@ const LodgingPage = () => {
   // ====== More+ 페이지네이션 ======
   const PAGE_SIZE = 6;
   const [visible, setVisible] = useState(PAGE_SIZE);
-  useEffect(() => setVisible(PAGE_SIZE), [debouncedQ, from, to, minPrice, maxPrice]);
 
-  const visibleList = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
+  useEffect(
+    () => setVisible(PAGE_SIZE),
+    [debouncedQ, from, to, minPrice, maxPrice]
+  );
+
+  const visibleList = useMemo(
+    () => filtered.slice(0, visible),
+    [filtered, visible]
+  );
+
   const canLoadMore = visible < filtered.length;
-  const handleMore = () => setVisible(v => Math.min(v + PAGE_SIZE, filtered.length));
+  const handleMore = () =>
+    setVisible((v) => Math.min(v + PAGE_SIZE, filtered.length));
 
   // ====== 리스트 실제 높이에 맞춰 푸터 위치 조정 ======
   const listRef = useRef(null);
   const [footerTop, setFooterTop] = useState(1667);
+
   useEffect(() => {
     const calc = () => {
       const el = listRef.current;
@@ -115,11 +136,18 @@ const LodgingPage = () => {
       setFooterTop(top + height + margin);
     };
     calc();
+
     const imgs = listRef.current?.querySelectorAll("img") || [];
-    imgs.forEach(img => { if (!img.complete) img.addEventListener("load", calc, { once: true }); });
+    imgs.forEach((img) => {
+      if (!img.complete) img.addEventListener("load", calc, { once: true });
+    });
+
     window.addEventListener("resize", calc);
     const id = setTimeout(calc, 0);
-    return () => { window.removeEventListener("resize", calc); clearTimeout(id); };
+    return () => {
+      window.removeEventListener("resize", calc);
+      clearTimeout(id);
+    };
   }, [visibleList.length]);
 
   return (
@@ -136,18 +164,34 @@ const LodgingPage = () => {
             type="button"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" fill="none" />
-              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="currentColor" strokeWidth="2" />
+              <circle
+                cx="11"
+                cy="11"
+                r="7"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+              />
+              <line
+                x1="16.5"
+                y1="16.5"
+                x2="22"
+                y2="22"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
             </svg>
             <span className="top-search__label">검색</span>
           </button>
-
           <form
             id="lodgingpage-top-search-form"
             role="search"
             className={`top-search__form ${searchOpen ? "is-open" : ""}`}
             aria-hidden={!searchOpen}
-            onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSearch();
+            }}
           >
             <input
               ref={inputRef}
@@ -167,15 +211,24 @@ const LodgingPage = () => {
 
         {/* 카테고리 3개 (숙박 활성) */}
         <div className="category-wrapper">
-          <div className="category-card active" onClick={() => navigate("/lodging")}>
+          <div
+            className="category-card active"
+            onClick={() => navigate("/lodging")}
+          >
             <img src={lodgingImg} alt="숙박" className="category-image" />
             <div className="category-label">숙박</div>
           </div>
-          <div className="category-card" onClick={() => navigate("/transfer")}>
+          <div
+            className="category-card"
+            onClick={() => navigate("/transfer")}
+          >
             <img src={transferImg} alt="양도" className="category-image" />
             <div className="category-label">양도</div>
           </div>
-          <div className="category-card" onClick={() => navigate("/chatbot")}>
+          <div
+            className="category-card"
+            onClick={() => navigate("/upload")}
+          >
             <img src={chatbotImg} alt="AI 챗봇" className="category-image" />
             <div className="category-label">업로드</div>
           </div>
@@ -183,7 +236,6 @@ const LodgingPage = () => {
 
         {/* ===== 필터 바 + More ===== */}
         <div className="filter-bar">
-          {/* (이하 원본 그대로) */}
           <div className="chip input-chip">
             <span className="chip-label">건물명</span>
             <input
@@ -192,12 +244,22 @@ const LodgingPage = () => {
               placeholder="예: ○○빌라"
             />
           </div>
+
           <div className="chip date-chip">
             <span className="chip-label">날짜</span>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
             <span className="tilde">~</span>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </div>
+
           <div className="chip input-chip">
             <span className="chip-label">금액</span>
             <input
@@ -220,7 +282,11 @@ const LodgingPage = () => {
             <span className="won">원</span>
           </div>
 
-          <button type="button" className="chip clear-chip" onClick={clearFilters}>
+          <button
+            type="button"
+            className="chip clear-chip"
+            onClick={clearFilters}
+          >
             초기화
           </button>
         </div>
@@ -240,10 +306,13 @@ const LodgingPage = () => {
             <div className="lodging-card" key={s.id}>
               <img src={roomImg} alt="숙박" className="lodging-image" />
               <div className="lodging-text">
-                {`${s.name} / ${s.from.slice(5).replace("-", ".")}~${s.to.slice(5).replace("-", ".")} / ${s.price.toLocaleString()}w`}
+                {`${s.name} / ${s.from.slice(5).replace("-", ".")}~${s.to
+                  .slice(5)
+                  .replace("-", ".")} / ${s.price.toLocaleString()}w`}
               </div>
             </div>
           ))}
+
           {filtered.length === 0 && (
             <div className="empty">조건에 맞는 숙소가 없어요.</div>
           )}

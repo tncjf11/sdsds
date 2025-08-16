@@ -83,6 +83,13 @@ const TransferPage = () => {
     return () => { window.removeEventListener("resize", calcFooter); clearTimeout(id); };
   }, [visibleList.length]);
 
+      // ✅ 상세로 이동 (state로 이미지/요약 전달)
+  const goDetail = (summary) => {
+    navigate("/detailtransfer", {
+      state: { img: roomImg, summary },
+    });
+  };
+
   return (
     <div className="screen">
       <div className="container transfer-page">
@@ -136,8 +143,8 @@ const TransferPage = () => {
             <img src={transferImg} alt="양도" className="category-image" />
             <div className="category-label">양도</div>
           </div>
-          <div className="category-card" onClick={() => navigate("/chatbot")}>
-            <img src={chatbotImg} alt="AI 챗봇" className="category-image" />
+          <div className="category-card" onClick={() => navigate("/upload")}>
+            <img src={chatbotImg} alt="업로드" className="category-image" />
             <div className="category-label">업로드</div>
           </div>
         </div>
@@ -152,14 +159,17 @@ const TransferPage = () => {
           More +
         </button>
 
-        {/* 리스트 */}
         <div className="transfer-list" ref={listRef}>
           {visibleList.map((text, i) => (
-            <div className="transfer-card" key={i}>
-              <img src={roomImg} alt="양도" className="transfer-image" />
-              <div className="transfer-text">{text}</div>
-            </div>
-          ))}
+          <div
+            className="transfer-card"
+            key={i}
+            onClick={() => goDetail(text)} // ✅ 상세 페이지 이동
+          >
+        <img src={roomImg} alt="양도" className="transfer-image" />
+          <div className="transfer-text">{text}</div>
+        </div>
+        ))}
         </div>
 
         {/* 푸터 */}
