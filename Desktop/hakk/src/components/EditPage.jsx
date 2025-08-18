@@ -1,47 +1,21 @@
-// src/components/UploadPage.jsx
-import React, { useRef, useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+// src/components/EditPage.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Header from "./Header";
 import "../styles/mainpage.css";
-import "../styles/UploadPage.css";
-
+import "../styles/EditPage.css"; // .edit-page 네임스페이스
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
-import uploadImg from "../image/image32.png";
-import { setDraft } from "../utils/draft";
+import editImg from "../image/image32.png";
 
-
-export const TagGroup = () => (
-  <div className="tag-group">
-    <div className="tag tag-outline" style={{ transform: "rotate(-6.33deg)" }}>
-      short_term
-    </div>
-    <div className="tag tag-outline-white" style={{ transform: "rotate(2.37deg)" }}>
-      to long-term
-    </div>
-    <div className="tag tag-filled" style={{ transform: "rotate(-5.35deg)" }}>
-      rentals!
-    </div>
-  </div>
-);
-
-// ✅ 백엔드 베이스 URL
-// - 프록시(package.json "proxy")를 쓰면 빈 문자열("") 로 두고, 요청은 "/api/..." 로만 나갑니다.
-// - 프록시를 안 쓰면 .env에 REACT_APP_API_BASE=http://<IP>:<PORT> 를 설정하세요.
-const API_BASE = (process.env.REACT_APP_API_BASE ?? "").trim();
-
-// ---------- 유틸 ----------
+// ===== 유틸 =====
 const pad2 = (n) => String(n).padStart(2, "0");
 function parseDateRange(input) {
   if (!input) return { startDate: null, endDate: null };
   const now = new Date();
   const yyyy = now.getFullYear();
-
-  // 1) YYYY-MM-DD ~ YYYY-MM-DD
   const iso = input.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);
   if (iso) return { startDate: iso[1], endDate: iso[2] };
-
-  // 2) MM.DD ~ MM.DD
   const md = input.match(/(\d{1,2})\.(\d{1,2})\s*~\s*(\d{1,2})\.(\d{1,2})/);
   if (md) {
     const s = `${yyyy}-${pad2(md[1])}-${pad2(md[2])}`;
@@ -55,11 +29,60 @@ const toInt = (v) => {
   const n = parseInt(String(v).replace(/[^\d]/g, ""), 10);
   return Number.isNaN(n) ? null : n;
 };
-const mapType = (tab) => (tab === "lodging" ? "STAY" : "TRANSFER");
+const tabToType = (tab) => (tab === "lodging" ? "STAY" : "TRANSFER");
+const typeToTab = (type) => (type === "STAY" ? "lodging" : "transfer");
 
-const UploadPage = () => {
+// ===== API (fetch 사용) =====
+async function patchListing(id, body) {
+  const resp = await fetch(`/api/listings/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const msg = await resp.text().catch(() => "");
+    throw new Error(`PATCH 실패 (${resp.status}) ${msg}`);
+  }
+  return resp.json().catch(() => ({}));
+}
+
+const EditPage = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // { mode, roomId, type, initialValues } 가능
+  const { id: idFromParams } = useParams();
+  const { state } = useLocation(); // { type, roomId, initialValues }
+
+  // ===== 이미지 선택(미리보기만; 파일 업로드는 별도 API 필요) =====
+  const fileInputRef = useRef(null);
+  const [preview, setPreview] = useState(null);
+  const [files, setFiles] = useState([]);
+  const onPickImage = () => fileInputRef.current?.click();
+  const onFileChange = (e) => {
+    const list = Array.from(e.target.files ?? []);
+    setFiles(list);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(list[0] ? URL.createObjectURL(list[0]) : null);
+  };
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  // ===== 탭: 상세에서 온 타입이 기본값이지만, 수정페이지에서는 전환 가능 =====
+  const initialTab = useMemo(() => {
+    if (state?.type === "lodging" || state?.type === "transfer") return state.type;
+    if (state?.initialValues?.date !== undefined) return "lodging";
+    return "transfer";
+  }, [state]);
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // ===== 폼 =====
+  const [forms, setForms] = useState({
+    transfer: { building: "", content: "", address: "", price: "", period: "" },
+    lodging: { building: "", content: "", date: "", people: "", amount: "", address: "" },
+  });
+  const form = forms[activeTab];
+  const onFormChange = (field) => (e) =>
+    setForms((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], [field]: e.target.value } }));
+
+  // PIN 확인
+  const [pinConfirm, setPinConfirm] = useState("");
 
   // 🔎 상단 검색
   const [searchOpen, setSearchOpen] = useState(false);
@@ -73,15 +96,13 @@ const UploadPage = () => {
       return next;
     });
   };
-  const submitSearch = () => {
-    const q = query.trim();
-    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
-  };
+  const submitSearch = () =>
+    navigate(query.trim() ? `/search?q=${encodeURIComponent(query.trim())}` : "/search");
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
-      const form = document.getElementById("uploadpage-top-search-form");
-      if (!form?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
+      const formEl = document.getElementById("editpage-top-search-form");
+      if (!formEl?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
         setSearchOpen(false);
         searchBtnRef.current?.focus();
       }
@@ -90,123 +111,88 @@ const UploadPage = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  // 이미지 업로드(여러 장)
-  const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null);
-  const [files, setFiles] = useState([]);
-
-  const onPickImage = () => fileInputRef.current?.click();
-  const onFileChange = (e) => {
-    const list = Array.from(e.target.files ?? []);
-    setFiles(list);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(list[0] ? URL.createObjectURL(list[0]) : null);
-  };
+  // ===== 초기값: state.initialValues 우선, 없으면 GET /api/listings/:id =====
+  const listingId = idFromParams ?? state?.roomId; // ← 항상 params 우선 (undefined 방지)
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
-    return () => { if (preview) URL.revokeObjectURL(preview); };
-  }, [preview]);
-
-  // 탭 / 폼
-  const guessInitialTab =
-    state?.type ?? (state?.initialValues?.date !== undefined ? "lodging" : "transfer");
-  const [activeTab, setActiveTab] = useState(guessInitialTab); // "transfer" | "lodging"
-
-  const [forms, setForms] = useState({
-    transfer: {
-      building: "",
-      content: "",
-      pin: "",
-      address: "",
-      price: "",
-      period: "",
-    },
-    lodging: {
-      building: "",
-      content: "",
-      pin: "",
-      date: "",
-      people: "",
-      amount: "",
-      address: "",
-    },
-  });
-  const form = forms[activeTab];
-  const onFormChange = (field) => (e) => {
-    const value = e.target.value;
-    setForms((prev) => ({
-      ...prev,
-      [activeTab]: { ...prev[activeTab], [field]: value },
-    }));
-  };
-
-  // 상세→수정 진입 시 초기값 주입
-  useEffect(() => {
-    const iv = state?.initialValues;
-    if (!iv) return;
-    const tab = state?.type ?? (iv?.date !== undefined ? "lodging" : "transfer");
-    setActiveTab(tab);
-    setForms((prev) => ({
-      ...prev,
-      [tab]: { ...prev[tab], ...iv },
-    }));
-    // 서버에서 전달된 이미지 URL 미리보기 넣고 싶으면 여기에 세팅
-    // if (iv?.thumbnailUrl) setPreview(iv.thumbnailUrl);
+    // 상세에서 넘겨준 값 사용
+    if (state?.initialValues) {
+      const tab = initialTab;
+      setForms((prev) => ({ ...prev, [tab]: { ...prev[tab], ...state.initialValues } }));
+      return;
+    }
+    // 직접 새로고침 등으로 들어온 경우 서버에서 로드
+    if (!listingId) return;
+    setLoading(true);
+    (async () => {
+      try {
+        const resp = await fetch(`/api/listings/${listingId}`);
+        if (!resp.ok) throw new Error("상세 불러오기에 실패했습니다.");
+        const data = await resp.json(); // { type:'STAY'|'TRANSFER', ... }
+        const tab = typeToTab(data?.type);
+        const next = { ...forms[tab] };
+        next.building = data?.buildingName ?? "";
+        next.content = data?.description ?? "";
+        next.address = data?.address ?? "";
+        if (tab === "lodging") {
+          next.date =
+            data?.startDate && data?.endDate ? `${data.startDate} ~ ${data.endDate}` : "";
+          next.people = data?.guests != null ? String(data.guests) : "";
+          next.amount = data?.price != null ? String(data.price) : "";
+        } else {
+          next.period =
+            data?.startDate && data?.endDate ? `${data.startDate} ~ ${data.endDate}` : "";
+          next.price = data?.price != null ? String(data.price) : "";
+        }
+        setActiveTab(tab); // 서버 타입 기준으로 탭 맞추되, 이후 사용자가 변경 가능
+        setForms((prev) => ({ ...prev, [tab]: next }));
+      } catch (e) {
+        console.error(e);
+        alert(String(e.message ?? e));
+      } finally {
+        setLoading(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 최초 1회
+  }, [listingId]);
 
-  // 업로드 (실연동)
-  const onUpload = async () => {
+  // ===== 제출: PATCH /api/listings/{id} (type 반영) =====
+  const onUpdate = async () => {
     try {
+      if (!listingId) return alert("잘못된 접근입니다 (id 없음)");
       if (!form.building?.trim()) return alert("건물명을 입력해 주세요.");
-      if (!form.pin?.trim()) return alert("PIN을 입력해 주세요.");
+      if (!pinConfirm?.trim()) return alert("업로드 시 사용한 PIN을 입력해 주세요.");
 
-      const type = mapType(activeTab);
-      const payload = {
-        type, // "STAY" | "TRANSFER"
+      const chosenType = tabToType(activeTab); // 'STAY' | 'TRANSFER'
+      const body = {
+        type: chosenType, // ← 탭에서 선택한 최종 타입을 백엔드에 전달
+        pin: pinConfirm.trim(),
         buildingName: form.building?.trim(),
-        description: form.content ?? "",
-        address: form.address ?? "",
-        startDate: null,
-        endDate: null,
-        guests: null,
-        price: null,
-        pin: form.pin?.trim(),
-        photos: [], // 서버 저장 후 채워질 필드
+        description: form.content || undefined,
+        address: form.address || undefined,
       };
 
-      if (type === "STAY") {
+      if (activeTab === "lodging") {
         const { startDate, endDate } = parseDateRange(form.date);
-        payload.startDate = startDate;
-        payload.endDate = endDate;
-        payload.guests = toInt(form.people);
-        payload.price = toInt(form.amount);
+        if (startDate) body.startDate = startDate;
+        if (endDate) body.endDate = endDate;
+        const guests = toInt(form.people);
+        if (guests != null) body.guests = guests;
+        const price = toInt(form.amount);
+        if (price != null) body.price = price;
       } else {
         const { startDate, endDate } = parseDateRange(form.period);
-        payload.startDate = startDate;
-        payload.endDate = endDate;
-        payload.price = toInt(form.price);
+        if (startDate) body.startDate = startDate;
+        if (endDate) body.endDate = endDate;
+        const price = toInt(form.price);
+        if (price != null) body.price = price;
       }
 
-      // 업로드 직전 초안 저장(실패 대비)
-      const roomId = state?.roomId ?? payload?.buildingName ?? "unknown";
-      setDraft(roomId, { tab: activeTab, ...payload });
+      await patchListing(listingId, body);
 
-      const fd = new FormData();
-      fd.append("data", JSON.stringify(payload)); // key: "data"
-      files.forEach((f) => fd.append("files", f)); // key: "files"
-
-    const resp = await fetch("/api/listings/with-upload", { method: "POST", body: fd });
-
-    
-      if (!resp.ok) {
-        const msg = await resp.text().catch(() => "");
-        throw new Error(`업로드 실패 (${resp.status}) ${msg}`);
-      }
-
-      const created = await resp.json(); // ListingResponse {id, type, ...}
-      const nextPath =
-        created?.type === "STAY" ? `/lodging/${created.id}` : `/transfer/${created.id}`;
-      alert("업로드 완료!");
+      // 최종 타입 기준 상세 페이지로 이동
+      const nextPath = chosenType === "STAY" ? `/lodging/${listingId}` : `/transfer/${listingId}`;
+      alert("수정 완료!");
       navigate(nextPath);
     } catch (e) {
       console.error(e);
@@ -214,48 +200,8 @@ const UploadPage = () => {
     }
   };
 
-  // AI 글쓰기 (실연동)
-  const [aiBusy, setAiBusy] = useState(false);
-  async function postJSON(path, body) {
-    const resp = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      const msg = await resp.text().catch(() => "");
-      throw new Error(`HTTP ${resp.status} ${resp.statusText} - ${msg}`);
-    }
-    return resp.json();
-  }
-  const onAiRewrite = async () => {
-    const rawText = forms[activeTab].content ?? "";
-    if (!rawText.trim()) {
-      alert("본문이 비어 있어요. 먼저 내용을 입력해 주세요.");
-      return;
-    }
-    setAiBusy(true);
-    try {
-      // 명세: POST /api/ai/polish { type, rawText }
-      const data = await postJSON(`/api/ai/polish`, {
-        type: mapType(activeTab),
-        rawText,
-      });
-      const improved = data?.improvedText ?? "";
-      setForms((prev) => ({
-        ...prev,
-        [activeTab]: { ...prev[activeTab], content: improved },
-      }));
-    } catch (e) {
-      console.error(e);
-      alert("AI 글쓰기 실패: " + e.message);
-    } finally {
-      setAiBusy(false);
-    }
-  };
-
   return (
-    <div className="screen upload-page">
+    <div className="screen edit-page">
       <div className="container">
         {/* 🔎 상단 검색 */}
         <div className="top-search">
@@ -264,7 +210,7 @@ const UploadPage = () => {
             className="top-search__toggle"
             onClick={toggleSearch}
             aria-expanded={searchOpen}
-            aria-controls="uploadpage-top-search-form"
+            aria-controls="editpage-top-search-form"
             type="button"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -273,9 +219,8 @@ const UploadPage = () => {
             </svg>
             <span className="top-search__label">검색</span>
           </button>
-
           <form
-            id="uploadpage-top-search-form"
+            id="editpage-top-search-form"
             role="search"
             className={`top-search__form ${searchOpen ? "is-open" : ""}`}
             aria-hidden={!searchOpen}
@@ -308,21 +253,14 @@ const UploadPage = () => {
             <div className="category-label">양도</div>
           </div>
           <div className="category-card active">
-            <img src={uploadImg} alt="업로드" className="category-image" />
-            <div className="category-label">업로드</div>
+            <img src={editImg} alt="수정" className="category-image" />
+            <div className="category-label">수정</div>
           </div>
         </div>
 
-        {/* 요약/태그 */}
-        <div className="summary-box">
-          <div className="summary-check">Check out</div>
-          <p className="summary-text">your home at a glance,</p>
-        </div>
-        <TagGroup />
-
         {/* 본문 */}
         <section className="upload-inner">
-          {/* 탭 */}
+          {/* 탭: 전환 가능 */}
           <div className="upload-tabs">
             <button
               type="button"
@@ -343,7 +281,7 @@ const UploadPage = () => {
           </div>
 
           <div className="upload-grid">
-            {/* 좌: 이미지 카드 */}
+            {/* 좌: 이미지 카드 (미리보기) */}
             <div className="upload-card" onClick={onPickImage} role="button" tabIndex={0}>
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
@@ -384,7 +322,7 @@ const UploadPage = () => {
                     <input
                       className="chip-input"
                       type="text"
-                      placeholder="YYYY-MM-DD"
+                      placeholder="YYYY-MM-DD ~ YYYY-MM-DD"
                       value={form.date}
                       onChange={onFormChange("date")}
                     />
@@ -398,7 +336,7 @@ const UploadPage = () => {
                     <input
                       className="chip-input"
                       type="text"
-                      placeholder="금액 (예: 50만원)"
+                      placeholder="금액 (예: 500000)"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       value={form.amount}
@@ -424,7 +362,7 @@ const UploadPage = () => {
                     <input
                       className="chip-input"
                       type="text"
-                      placeholder="가격 (예: 150만원)"
+                      placeholder="가격 (예: 1500000)"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       value={form.price}
@@ -433,7 +371,7 @@ const UploadPage = () => {
                     <input
                       className="chip-input"
                       type="text"
-                      placeholder="YYYY-MM-DD"
+                      placeholder="YYYY-MM-DD ~ YYYY-MM-DD"
                       value={form.period}
                       onChange={onFormChange("period")}
                     />
@@ -441,15 +379,15 @@ const UploadPage = () => {
                 )}
               </div>
 
-              {/* 요약 라인 */}
+              {/* 요약 */}
               <div className="summary summary--form">
                 {activeTab === "lodging"
                   ? form.date || form.people || form.amount || form.address
                     ? `${form.date || ""} / ${form.people || ""} / ${form.amount || ""} / ${form.address || ""}`
-                    : "11.2~11.5 / 2명 / 50만원 / ○○빌라"
+                    : "11.2~11.5 / 2명 / 500000 / ○○빌라"
                   : form.address || form.price || form.period
                     ? `${form.address || ""} / ${form.price || ""} / ${form.period || ""}`
-                    : "○○빌라 / 150만원 / 바로입주"}
+                    : "○○빌라 / 1500000 / 바로입주"}
               </div>
 
               {/* 본문 */}
@@ -462,26 +400,22 @@ const UploadPage = () => {
                 />
               </div>
 
-              {/* 하단: PIN + 업로드 + AI 글쓰기 */}
+              {/* 하단: PIN + 수정완료 */}
               <div className="bottom-actions">
                 <div className="pin-wrap">
-                  <label className="pin-label">PIN</label>
+                  <label className="pin-label">PIN 확인</label>
                   <input
                     className="pin-input"
-                    value={form.pin}
-                    onChange={onFormChange("pin")}
+                    value={pinConfirm}
+                    onChange={(e) => setPinConfirm(e.target.value)}
                     maxLength={6}
                     inputMode="numeric"
                     pattern="[0-9]*"
                   />
                 </div>
 
-                <button type="button" className="upload-btn" onClick={onUpload}>
-                  업로드
-                </button>
-
-                <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
-                  {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
+                <button type="button" className="upload-btn" onClick={onUpdate} disabled={loading}>
+                  수정완료
                 </button>
               </div>
             </div>
@@ -498,4 +432,4 @@ const UploadPage = () => {
   );
 };
 
-export default UploadPage;
+export default EditPage;

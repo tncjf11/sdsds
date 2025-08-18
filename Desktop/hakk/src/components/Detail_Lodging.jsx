@@ -1,13 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+// src/components/Detail_Lodging.jsx
+import React, { useRef, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import house from "../image/house.png";
 import "../styles/Detail_Lodging.css";
-import { popDraft, removeDraft } from "../utils/draft";
+
+/* ===== 공통 유틸 ===== */
+const API_BASE = ""; // CRA dev-proxy 사용 시 빈 문자열
+const mmdd = (iso) => (iso ? iso.slice(5).replace("-", ".") : "");
+function buildImgUrl(u, fallback) {
+  if (!u) return fallback;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+}
 
 /** 네이버 스크립트 로더 */
 function useNaverScript(clientId) {
   const [ready, setReady] = useState(!!window.naver?.maps);
-
   useEffect(() => {
     if (window.naver?.maps) {
       setReady(true);
@@ -17,20 +25,18 @@ function useNaverScript(clientId) {
       console.warn("REACT_APP_NAVER_MAP_ID 가 설정되지 않았습니다.");
       return;
     }
-
     const el = document.createElement("script");
-    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder`;
+    el.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder`;
     el.async = true;
     el.onload = () => setReady(true);
     el.onerror = () => console.error("Naver Maps 스크립트 로딩 실패");
     document.head.appendChild(el);
   }, [clientId]);
-
   return ready;
 }
 
-/** 지도 컴포넌트 */
-function NaverMap({ lat, lng, zoom = 16, style }) {
+/** 지도: lat/lng 또는 address로 표시 */
+function NaverMap({ lat, lng, address, zoom = 16, style }) {
   const mapRef = useRef(null);
   const ncpClientId = process.env.REACT_APP_NAVER_MAP_ID;
   const ready = useNaverScript(ncpClientId);
@@ -40,14 +46,22 @@ function NaverMap({ lat, lng, zoom = 16, style }) {
     const { naver } = window;
     if (!naver?.maps) return;
 
-    const position = new naver.maps.LatLng(lat, lng);
-    const map = new naver.maps.Map(mapRef.current, {
-      center: position,
-      zoom,
-    });
+    const renderAt = (position) => {
+      const map = new naver.maps.Map(mapRef.current, { center: position, zoom });
+      new naver.maps.Marker({ position, map });
+    };
 
-    new naver.maps.Marker({ position, map });
-  }, [ready, lat, lng, zoom]);
+    if (lat != null && lng != null) {
+      renderAt(new naver.maps.LatLng(lat, lng));
+    } else if (address && naver.maps.Service?.geocode) {
+      naver.maps.Service.geocode({ query: address }, (status, res) => {
+        if (status !== naver.maps.Service.Status.OK || !res?.v2?.addresses?.length) return;
+        const a = res.v2.addresses[0];
+        const pos = new naver.maps.LatLng(Number(a.y), Number(a.x));
+        renderAt(pos);
+      });
+    }
+  }, [ready, lat, lng, address, zoom]);
 
   return (
     <div
@@ -65,8 +79,9 @@ function NaverMap({ lat, lng, zoom = 16, style }) {
 
 const DetailLodging = () => {
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const { id } = useParams();
 
+  // 🔎 상단 검색
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -83,7 +98,6 @@ const DetailLodging = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
-
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
@@ -97,7 +111,79 @@ const DetailLodging = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  if (!state) {
+  /* ===== 데이터 로딩(STAY) ===== */
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    setLoading(true);
+    setErr("");
+
+    fetch(`/api/listings/stay/${id}`)
+      .then(async (resp) => {
+        if (!resp.ok)
+          throw new Error(`상세 조회 실패 (${resp.status}) ${await resp.text().catch(() => "")}`);
+        return resp.json();
+      })
+      .then((json) => {
+        if (alive) setData(json);
+      })
+      .catch((e) => {
+        if (alive) setErr(e.message || String(e));
+      })
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  /* ===== 수정: 반드시 수정페이지로 이동 ===== */
+  const toEdit = () => {
+    if (!data) return;
+    navigate(`/lodging/edit/${data.id}`, {
+      state: {
+        type: "lodging", // 탭 고정 기본값
+        roomId: data.id,
+        initialValues: {
+          building: data.buildingName || "",
+          content: data.description || "",
+          address: data.address || "",
+          date:
+            data.startDate && data.endDate
+              ? `${data.startDate} ~ ${data.endDate}`
+              : "",
+          people: data.guests != null ? String(data.guests) : "",
+          amount: data.price != null ? String(data.price) : "",
+          pin: "", // 수정 페이지에서 재입력
+        },
+      },
+    });
+  };
+
+  /* ===== 삭제: PIN 확인 → DELETE → 메인으로 이동 ===== */
+  const onDelete = async () => {
+    const pin = window.prompt("삭제 PIN을 입력하세요");
+    if (!pin) return;
+    try {
+      const resp = await fetch(`/api/listings/${id}?pin=${encodeURIComponent(pin)}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) {
+        const msg = await resp.text().catch(() => "");
+        throw new Error(`삭제 실패 (${resp.status}) ${msg}`);
+      }
+      alert("삭제되었습니다.");
+      navigate("/"); // 메인으로 이동
+    } catch (e) {
+      alert(String(e.message ?? e));
+    }
+  };
+
+  if (!id) {
     return (
       <div style={{ padding: 24 }}>
         잘못된 접근입니다.{" "}
@@ -105,13 +191,6 @@ const DetailLodging = () => {
       </div>
     );
   }
-
-  const roomId = state?.id ?? state?.roomId ?? state?.building ?? "unknown";
-
-  // ✅ 상세 본문 텍스트 (업로드 content에 넘길 값)
-  const detailContent = `N명까지 가능합니다 침구 N개 있어요.
-편의점도 도보 2분 거리에 있어요
-oooo@ooo.com`;
 
   return (
     <div className="detail-lodging">
@@ -129,9 +208,12 @@ oooo@ooo.com`;
               role="button"
               tabIndex={0}
               onClick={() => navigate("/")}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate("/")}
               style={{ cursor: "pointer" }}
             />
           </div>
+
+          {/* 🔎 검색 */}
           <div className="top-search">
             <button
               ref={searchBtnRef}
@@ -153,7 +235,10 @@ oooo@ooo.com`;
               role="search"
               className={`top-search__form ${searchOpen ? "is-open" : ""}`}
               aria-hidden={!searchOpen}
-              onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
             >
               <input
                 ref={inputRef}
@@ -174,78 +259,96 @@ oooo@ooo.com`;
           <button className="pill pill--black">숙박</button>
         </div>
 
-        {/* 사진 + 상세 */}
+        {/* 사진 + 상세 그리드 */}
         <section className="detail-grid">
+          {/* 좌측: 사진 카드 */}
           <div className="photo-card">
             <div className="pc-shadow s1" />
             <div className="pc-shadow s2" />
             <div className="pc-body">
-              <img src={state?.img} alt="숙박 이미지" className="pc-img" />
+              <img
+                src={buildImgUrl(data?.photos?.[0], house)}
+                alt="숙박 이미지"
+                className="pc-img"
+              />
             </div>
           </div>
 
+          {/* 우측: 텍스트 상세 */}
           <div className="detail-info">
-            <h3 className="di-title">ㅇㅇ빌라 숙박</h3>
-            <div className="di-hr" />
-            <div className="di-meta">{state?.summary || "11.02~11.05 / 2명 / 30,000원"}</div>
-            <div className="di-body">
-              <p className="di-desc">{detailContent}</p>
+            {loading && <div className="di-title">불러오는 중…</div>}
+            {err && !loading && <div className="di-title">오류: {err}</div>}
+            {!loading && !err && (
+              <>
+                <h3 className="di-title">{data?.buildingName ?? "숙박"}</h3>
+                <div className="di-hr" />
+                <div className="di-meta">
+                  {`${data?.startDate ? mmdd(data.startDate) : ""}${
+                    data?.startDate || data?.endDate ? "~" : ""
+                  }${data?.endDate ? mmdd(data.endDate) : ""} / ${
+                    data?.guests != null ? `${data.guests}명` : ""
+                  } / ${
+                    data?.price != null ? data.price.toLocaleString() + "원" : ""
+                  }`}
+                </div>
+                <div className="di-body">
+                  <p className="di-desc">
+                    {data?.description || "설명이 없습니다."}
+                    {data?.address ? (
+                      <>
+                        <br />
+                        주소: {data.address}
+                      </>
+                    ) : null}
+                  </p>
 
-              <div className="di-actions">
-                {/* ✅ 수정 버튼 */}
-                <button
-                  className="chip chip--ghost"
-                  onClick={() => {
-                    const draft = popDraft(roomId);
-
-                    // ✅ 업로드 페이지와 호환되는 초기값
-                    const initialValues = {
-                      building: state?.building ?? "ㅇㅇ빌라",
-                      date: state?.date ?? "11.02 ~ 11.05",
-                      people: state?.people ?? "2명",
-                      amount: state?.amount ?? "30,000원",
-                      address: state?.address ?? "ㅇㅇ빌라",
-                      content: state?.content ?? detailContent, // 본문 내용 연결
-                      pin: state?.pin ?? "",
-                      img: state?.img ?? "",
-                    };
-
-                    navigate("/upload", {
-                      state: {
-                        mode: "edit",
-                        type: "lodging",
-                        roomId,
-                        initialValues: draft ?? initialValues,
-                      },
-                    });
-                  }}
-                >
-                  수정
-                </button>
-
-                {/* 삭제 버튼 */}
-                <button
-                  className="chip chip--ghost"
-                  onClick={() => {
-                    removeDraft(roomId);
-                    alert("삭제 완료!");
-                    navigate("/");
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
+                  <div className="di-actions">
+                    <button
+                      type="button"
+                      className="chip chip--ghost"
+                      onClick={toEdit}
+                      disabled={loading || !!err}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="chip chip--ghost"
+                      onClick={onDelete}
+                      disabled={loading || !!err}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
         {/* 지도 */}
         <section style={{ padding: "0 56px", marginTop: 28 }}>
-          <NaverMap lat={37.5666103} lng={126.9783882} />
+          {data?.address ? (
+            <NaverMap address={data.address} />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: 530,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 16,
+                border: "1px solid #e5e5e5",
+              }}
+            >
+              주소 정보가 없어 지도를 표시할 수 없습니다.
+            </div>
+          )}
         </section>
 
         <div className="footer-text">
-          FIT ROOM<br />
+          FIT ROOM
+          <br />
           <span className="footer-sub">_Finding a house that suits me</span>
         </div>
       </div>

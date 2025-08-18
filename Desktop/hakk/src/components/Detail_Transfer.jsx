@@ -1,13 +1,21 @@
+// src/components/Detail_Transfer.jsx
 import React, { useRef, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import house from "../image/house.png";
 import "../styles/Detail_Transfer.css";
-import { popDraft, removeDraft } from "../utils/draft"; // ✅ 드래프트 유틸 추가
+
+/* ===== 공통 유틸 ===== */
+const API_BASE = ""; // CRA dev-proxy 사용 시 빈 문자열
+const mmdd = (iso) => (iso ? iso.slice(5).replace("-", ".") : "");
+function buildImgUrl(u, fallback) {
+  if (!u) return fallback;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+}
 
 /** 네이버 스크립트 로더 */
 function useNaverScript(clientId) {
   const [ready, setReady] = useState(!!window.naver?.maps);
-
   useEffect(() => {
     if (window.naver?.maps) {
       setReady(true);
@@ -17,20 +25,18 @@ function useNaverScript(clientId) {
       console.warn("REACT_APP_NAVER_MAP_ID 가 설정되지 않았습니다.");
       return;
     }
-
     const el = document.createElement("script");
-    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder`;
+    el.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}&submodules=geocoder`;
     el.async = true;
     el.onload = () => setReady(true);
     el.onerror = () => console.error("Naver Maps 스크립트 로딩 실패(리퍼러/키 확인)");
     document.head.appendChild(el);
   }, [clientId]);
-
   return ready;
 }
 
-/** 지도 컴포넌트 */
-function NaverMap({ lat, lng, zoom = 16, style }) {
+/** 지도: lat/lng 또는 address로 표시 */
+function NaverMap({ lat, lng, address, zoom = 16, style }) {
   const mapRef = useRef(null);
   const ncpClientId = process.env.REACT_APP_NAVER_MAP_ID;
   const ready = useNaverScript(ncpClientId);
@@ -40,14 +46,22 @@ function NaverMap({ lat, lng, zoom = 16, style }) {
     const { naver } = window;
     if (!naver?.maps) return;
 
-    const position = new naver.maps.LatLng(lat, lng);
-    const map = new naver.maps.Map(mapRef.current, {
-      center: position,
-      zoom,
-    });
+    const renderAt = (position) => {
+      const map = new naver.maps.Map(mapRef.current, { center: position, zoom });
+      new naver.maps.Marker({ position, map });
+    };
 
-    new naver.maps.Marker({ position, map });
-  }, [ready, lat, lng, zoom]);
+    if (lat != null && lng != null) {
+      renderAt(new naver.maps.LatLng(lat, lng));
+    } else if (address && naver.maps.Service?.geocode) {
+      naver.maps.Service.geocode({ query: address }, (status, res) => {
+        if (status !== naver.maps.Service.Status.OK || !res?.v2?.addresses?.length) return;
+        const a = res.v2.addresses[0];
+        const pos = new naver.maps.LatLng(Number(a.y), Number(a.x));
+        renderAt(pos);
+      });
+    }
+  }, [ready, lat, lng, address, zoom]);
 
   return (
     <div
@@ -65,9 +79,9 @@ function NaverMap({ lat, lng, zoom = 16, style }) {
 
 const DetailTransfer = () => {
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const { id } = useParams();
 
-  /* ── 🔎 상단 검색 UI (원본 유지) ── */
+  // 🔎 상단 검색
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -87,7 +101,7 @@ const DetailTransfer = () => {
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
-      const form = document.getElementById("lodgingpage-top-search-form");
+      const form = document.getElementById("transferpage-top-search-form");
       if (!form?.contains(e.target) && !searchBtnRef.current?.contains(e.target)) {
         setSearchOpen(false);
         searchBtnRef.current?.focus();
@@ -97,7 +111,78 @@ const DetailTransfer = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  if (!state) {
+  /* ===== 데이터 로딩(TRANSFER) ===== */
+  const [data, setData] = useState(null); // TransferDetailResponse
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    setLoading(true);
+    setErr("");
+
+    fetch(`/api/listings/transfer/${id}`)
+      .then(async (resp) => {
+        if (!resp.ok)
+          throw new Error(`상세 조회 실패 (${resp.status}) ${await resp.text().catch(() => "")}`);
+        return resp.json();
+      })
+      .then((json) => {
+        if (alive) setData(json);
+      })
+      .catch((e) => {
+        if (alive) setErr(e.message || String(e));
+      })
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  /* ===== 수정: 반드시 수정페이지로 이동 ===== */
+  const toEdit = () => {
+    if (!data) return;
+    navigate(`/transfer/edit/${data.id}`, {
+      state: {
+        type: "transfer", // 탭 기본값
+        roomId: data.id,
+        initialValues: {
+          building: data.buildingName || "",
+          content: data.description || "",
+          address: data.address || "",
+          period:
+            data.startDate && data.endDate
+              ? `${data.startDate} ~ ${data.endDate}`
+              : "",
+          price: data.price != null ? String(data.price) : "",
+          pin: "", // 수정 페이지에서 재입력
+        },
+      },
+    });
+  };
+
+  /* ===== 삭제: PIN 확인 → DELETE → 메인으로 이동 ===== */
+  const onDelete = async () => {
+    const pin = window.prompt("삭제 PIN을 입력하세요");
+    if (!pin) return;
+    try {
+      const resp = await fetch(`/api/listings/${id}?pin=${encodeURIComponent(pin)}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) {
+        const msg = await resp.text().catch(() => "");
+        throw new Error(`삭제 실패 (${resp.status}) ${msg}`);
+      }
+      alert("삭제되었습니다.");
+      navigate("/"); // 메인으로 이동
+    } catch (e) {
+      alert(String(e.message ?? e));
+    }
+  };
+
+  if (!id) {
     return (
       <div style={{ padding: 24 }}>
         잘못된 접근입니다.{" "}
@@ -105,22 +190,6 @@ const DetailTransfer = () => {
       </div>
     );
   }
-
-  // ✅ 드래프트/식별자 키(백엔드 붙이면 서버 PK로 교체)
-  const roomId = state?.id ?? state?.roomId ?? state?.building ?? "unknown";
-
-  // ✅ 본문(content): 상세에 보이는 문단을 그대로 업로드로 넘길 값
-  const detailContent =
-    state?.content ||
-    `N명까지 가능합니다 침구 N개 있어요.
-편의점도 도보 2분 거리에 있어요
-oooo@ooo.com`;
-
-  // ✅ 메타(상단 요약): 주소/가격/기간(양도 전용 필드)
-  const metaAddress = state?.address ?? "대곡빌라";
-  const metaPrice = state?.price ?? "150만원";
-  const metaPeriod = state?.period ?? "바로입주";
-  const metaText = `${metaAddress} / ${metaPrice} / ${metaPeriod}`;
 
   return (
     <div className="detail-transfer">
@@ -143,14 +212,14 @@ oooo@ooo.com`;
             />
           </div>
 
-          {/* 🔎 검색 버튼/폼 유지 */}
+          {/* 🔎 검색 */}
           <div className="top-search">
             <button
               ref={searchBtnRef}
               className="top-search__toggle"
               onClick={toggleSearch}
               aria-expanded={searchOpen}
-              aria-controls="lodgingpage-top-search-form"
+              aria-controls="transferpage-top-search-form"
               type="button"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -161,11 +230,14 @@ oooo@ooo.com`;
             </button>
 
             <form
-              id="lodgingpage-top-search-form"
+              id="transferpage-top-search-form"
               role="search"
               className={`top-search__form ${searchOpen ? "is-open" : ""}`}
               aria-hidden={!searchOpen}
-              onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
             >
               <input
                 ref={inputRef}
@@ -186,78 +258,99 @@ oooo@ooo.com`;
           <button className="pill pill--black">양도</button>
         </div>
 
-        {/* ===== 사진 + 상세 그리드 ===== */}
+        {/* 사진 + 상세 그리드 */}
         <section className="detail-grid">
           {/* 좌측: 사진 카드 */}
           <div className="photo-card">
             <div className="pc-shadow s1" />
             <div className="pc-shadow s2" />
             <div className="pc-body">
-              <img src={state?.img} alt="양도 이미지" className="pc-img" />
+              <img
+                src={buildImgUrl(data?.photos?.[0], house)}
+                alt="양도 이미지"
+                className="pc-img"
+              />
             </div>
           </div>
 
           {/* 우측: 텍스트 상세 */}
           <div className="detail-info">
-            <h3 className="di-title">{(state?.building ?? "ㅇㅇ빌라") + " 양도"}</h3>
-            <div className="di-hr" />
-            <div className="di-meta">{state?.summary || metaText}</div>
+            {loading && <div className="di-title">불러오는 중…</div>}
+            {err && !loading && <div className="di-title">오류: {err}</div>}
+            {!loading && !err && (
+              <>
+                <h3 className="di-title">{data?.buildingName ?? "양도"}</h3>
+                <div className="di-hr" />
+                <div className="di-meta">
+                  {`${data?.address ?? ""} / ${
+                    data?.price != null ? data.price.toLocaleString() + "원" : ""
+                  } / ${
+                    data?.startDate || data?.endDate
+                      ? `${data?.startDate ? mmdd(data.startDate) : ""}~${
+                          data?.endDate ? mmdd(data.endDate) : ""
+                        }`
+                      : "바로입주"
+                  }`}
+                </div>
 
-            <div className="di-body">
-              <p className="di-desc">{detailContent}</p>
+                <div className="di-body">
+                  <p className="di-desc">
+                    {data?.description || "설명이 없습니다."}
+                    {data?.address ? (
+                      <>
+                        <br />
+                        주소: {data.address}
+                      </>
+                    ) : null}
+                  </p>
 
-              <div className="di-actions">
-                {/* ✅ 수정: 드래프트 복원 → 업로드 페이지로 이동 (양도 전용 필드 매핑) */}
-                <button
-                  className="chip chip--ghost"
-                  onClick={() => {
-                    const draft = popDraft(roomId);
-                    const initialValues = {
-                      // ⬇ UploadPage의 "transfer" 폼 키와 1:1 매핑
-                      building: state?.building ?? "ㅇㅇ빌라",
-                      address: metaAddress,
-                      price: metaPrice,
-                      period: metaPeriod,
-                      content: detailContent,
-                      pin: state?.pin ?? "",
-                      img: state?.img ?? "",
-                    };
-                    navigate("/upload", {
-                      state: {
-                        mode: "edit",
-                        type: "transfer", // ⬅ 양도 탭 강제
-                        roomId,
-                        initialValues: draft ?? initialValues,
-                      },
-                    });
-                  }}
-                >
-                  수정
-                </button>
-
-                {/* ✅ 삭제: 드래프트 폐기 + 얼럿 + 메인(또는 목록) 이동 */}
-                <button
-                  className="chip chip--ghost"
-                  onClick={() => {
-                    removeDraft(roomId);
-                    alert("삭제 완료!");
-                    navigate("/transfer"); // 목록으로 이동
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
+                  <div className="di-actions">
+                    <button
+                      type="button"
+                      className="chip chip--ghost"
+                      onClick={toEdit}
+                      disabled={loading || !!err}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="chip chip--ghost"
+                      onClick={onDelete}
+                      disabled={loading || !!err}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
         {/* 지도 */}
         <section style={{ padding: "0 56px", marginTop: 28 }}>
-          <NaverMap lat={37.5666103} lng={126.9783882} />
+          {data?.address ? (
+            <NaverMap address={data.address} />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: 530,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 16,
+                border: "1px solid #e5e5e5",
+              }}
+            >
+              주소 정보가 없어 지도를 표시할 수 없습니다.
+            </div>
+          )}
         </section>
 
         <div className="footer-text">
-          FIT ROOM<br />
+          FIT ROOM
+          <br />
           <span className="footer-sub">_Finding a house that suits me</span>
         </div>
       </div>

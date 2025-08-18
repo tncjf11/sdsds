@@ -1,3 +1,4 @@
+// src/components/LodgingPage.jsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";
@@ -7,27 +8,23 @@ import transferImg from "../image/image21.png";
 import chatbotImg from "../image/image32.png";
 import roomImg from "../image/room-sample.png";
 
-// 예시 데이터
-const LODGINGS = [
-  { id: 1, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
-  { id: 2, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
-  { id: 3, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
-  { id: 4, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
-  { id: 5, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-05", price: 30000 },
-  { id: 6, name: "ㅇㅇ빌라", from: "2024-11-02", to: "2024-11-06", price: 20000 },
-  { id: 7, name: "ㅇㅇ빌라", from: "2024-11-03", to: "2024-11-06", price: 28000 },
-  { id: 8, name: "ㅇㅇ빌라", from: "2024-11-04", to: "2024-11-07", price: 26000 },
-  { id: 9, name: "ㅇㅇ빌라", from: "2024-11-05", to: "2024-11-08", price: 24000 },
-];
+// 백엔드 베이스 URL
+const API_BASE = "";
 
-// 날짜 범위 겹침 체크
-const overlap = (aStart, aEnd, bStart, bEnd) =>
-  new Date(aStart) <= new Date(bEnd) && new Date(bStart) <= new Date(aEnd);
+// 썸네일 URL 조합 (상대경로면 API_BASE 붙이고, 없으면 기본 이미지)
+function buildImgUrl(u) {
+  if (!u) return roomImg;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+}
+
+// MM.DD 포맷
+const mmdd = (iso) => (iso ? iso.slice(5).replace("-", ".") : "");
 
 const LodgingPage = () => {
   const navigate = useNavigate();
 
-  /* ── 🔎 메인페이지와 동일한 검색 토글/폼 상태 ── */
+  /* ── 상단 검색(메인 동일) ── */
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -44,7 +41,6 @@ const LodgingPage = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
-  // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
   useEffect(() => {
     const onDocMouseDown = (e) => {
       if (!searchOpen) return;
@@ -64,44 +60,63 @@ const LodgingPage = () => {
   const [to, setTo] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const clearFilters = () => { setQ(""); setFrom(""); setTo(""); setMinPrice(""); setMaxPrice(""); };
+  const clearFilters = () => {
+    setQ(""); setFrom(""); setTo(""); setMinPrice(""); setMaxPrice("");
+  };
 
-  // 검색어 디바운스
-  const [debouncedQ, setDebouncedQ] = useState(q);
+  // 디바운스
+  const [debounced, setDebounced] = useState({ q, from, to, minPrice, maxPrice });
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 250);
+    const t = setTimeout(() => setDebounced({ q, from, to, minPrice, maxPrice }), 250);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, from, to, minPrice, maxPrice]);
 
-  // ====== 목록 필터링 ======
-  const filtered = useMemo(() => {
-    return LODGINGS.filter((s) => {
-      const okName =
-        debouncedQ.trim() === "" ||
-        s.name.toLowerCase().includes(debouncedQ.trim().toLowerCase());
+  // ====== 데이터 ======
+  const [items, setItems] = useState([]);      // StayTopItem[]
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
-      const okMin = minPrice === "" || s.price >= Number(minPrice);
-      const okMax = maxPrice === "" || s.price <= Number(maxPrice);
+  async function fetchList(params) {
+    const usp = new URLSearchParams();
+    if (params.q?.trim()) usp.set("name", params.q.trim());
+    if (params.from) usp.set("startDate", params.from);
+    if (params.to) usp.set("endDate", params.to);
+    if (params.minPrice) usp.set("minPrice", params.minPrice);
+    if (params.maxPrice) usp.set("maxPrice", params.maxPrice);
 
-      let okDate = true;
-      if (from && to) okDate = overlap(from, to, s.from, s.to);
-      else if (from)  okDate = new Date(from) <= new Date(s.to);
-      else if (to)    okDate = new Date(s.from) <= new Date(to);
+    const path = usp.toString()
+      ? `/api/listings/stay/search?${usp.toString()}`
+      : `/api/listings/stay`;
 
-      return okName && okMin && okMax && okDate;
-    });
-  }, [debouncedQ, from, to, minPrice, maxPrice]);
+    const resp = await fetch(`${API_BASE}${path}`);
+    if (!resp.ok) {
+      const msg = await resp.text().catch(() => "");
+      throw new Error(`목록 조회 실패 (${resp.status}) ${msg}`);
+    }
+    return resp.json(); // StayTopItem[]
+  }
+
+  useEffect(() => {
+  let alive = true;
+  setLoading(true);
+  setErr("");
+  fetchList(debounced)
+    .then((data) => { if (alive) setItems(Array.isArray(data) ? data : []); })
+    .catch((e) => { if (alive) setErr(e.message || String(e)); })
+    .finally(() => alive && setLoading(false));
+  return () => { alive = false; };
+}, [debounced]);   // ← 이렇게 객체 자체를 의존성에 넣기
+
 
   // ====== More+ 페이지네이션 ======
   const PAGE_SIZE = 6;
   const [visible, setVisible] = useState(PAGE_SIZE);
-  useEffect(() => setVisible(PAGE_SIZE), [debouncedQ, from, to, minPrice, maxPrice]);
+  useEffect(() => setVisible(PAGE_SIZE), [items]);
+  const visibleList = useMemo(() => items.slice(0, visible), [items, visible]);
+  const canLoadMore = visible < items.length;
+  const handleMore = () => setVisible((v) => Math.min(v + PAGE_SIZE, items.length));
 
-  const visibleList = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
-  const canLoadMore = visible < filtered.length;
-  const handleMore = () => setVisible(v => Math.min(v + PAGE_SIZE, filtered.length));
-
-  // ====== 리스트 실제 높이에 맞춰 푸터 위치 조정 ======
+  // 푸터 위치 보정
   const listRef = useRef(null);
   const [footerTop, setFooterTop] = useState(1667);
   useEffect(() => {
@@ -115,23 +130,21 @@ const LodgingPage = () => {
     };
     calc();
     const imgs = listRef.current?.querySelectorAll("img") || [];
-    imgs.forEach(img => { if (!img.complete) img.addEventListener("load", calc, { once: true }); });
+    imgs.forEach((img) => {
+      if (!img.complete) img.addEventListener("load", calc, { once: true });
+    });
     window.addEventListener("resize", calc);
     const id = setTimeout(calc, 0);
     return () => { window.removeEventListener("resize", calc); clearTimeout(id); };
   }, [visibleList.length]);
 
-    // ✅ 상세로 이동 (state로 이미지/요약 전달)
-  const goDetail = (summary) => {
-    navigate("/detaillodging", {
-      state: { img: roomImg, summary },
-    });
-  };
+  // 상세 이동
+  const goDetail = (id) => navigate(`/lodging/${id}`);
 
   return (
     <div className="screen">
       <div className="container lodging-page">
-        {/* 🔎 우측 상단 검색(메인과 동일) */}
+        {/* 상단 검색 */}
         <div className="top-search">
           <button
             ref={searchBtnRef}
@@ -171,7 +184,7 @@ const LodgingPage = () => {
         {/* 공용 헤더 */}
         <Header />
 
-        {/* 카테고리 3개 (숙박 활성) */}
+        {/* 카테고리 */}
         <div className="category-wrapper">
           <div className="category-card active" onClick={() => navigate("/lodging")}>
             <img src={lodgingImg} alt="숙박" className="category-image" />
@@ -187,16 +200,11 @@ const LodgingPage = () => {
           </div>
         </div>
 
-        {/* ===== 필터 바 + More ===== */}
+        {/* 필터 바 */}
         <div className="filter-bar">
-          {/* (이하 원본 그대로) */}
           <div className="chip input-chip">
             <span className="chip-label">건물명</span>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="예: ○○빌라"
-            />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="예: ○○빌라" />
           </div>
           <div className="chip date-chip">
             <span className="chip-label">날짜</span>
@@ -225,12 +233,12 @@ const LodgingPage = () => {
             />
             <span className="won">원</span>
           </div>
-
           <button type="button" className="chip clear-chip" onClick={clearFilters}>
             초기화
           </button>
         </div>
 
+        {/* More+ */}
         <button
           type="button"
           className={`more-btn ${canLoadMore ? "" : "disabled"}`}
@@ -240,26 +248,25 @@ const LodgingPage = () => {
           More +
         </button>
 
-        {/* ===== 숙박 리스트 ===== */}
+        {/* 리스트 */}
         <div className="lodging-list" ref={listRef}>
-          {visibleList.map((s) => (
-            <div className="lodging-card"
+          {loading && <div className="empty">불러오는 중...</div>}
+          {err && !loading && <div className="empty">오류: {err}</div>}
+          {!loading && !err && visibleList.map((s) => (
+            <div
+              className="lodging-card"
               key={s.id}
-              onClick={() =>
-              goDetail(
-                `${s.name} / ${s.from.slice(5).replace("-", ".")}~${s.to.slice(5)
-                .replace("-", ".")} / ${s.price.toLocaleString()}원`
-              )
-            }
+              onClick={() => goDetail(s.id)}
             >
-            <img src={roomImg} alt="숙박" className="lodging-image" />
+              <img src={buildImgUrl(s.thumbnailUrl)} alt="숙박" className="lodging-image" />
               <div className="lodging-text">
-            {`${s.name} / ${s.from.slice(5).replace("-", ".")}~${s.to.slice(5)
-            .replace("-", ".")} / ${s.price.toLocaleString()}원`}
-          </div>
-        </div>
+                {`${s.buildingName ?? ""} / ${mmdd(s.startDate)}~${mmdd(s.endDate)} / ${
+                  s.price != null ? s.price.toLocaleString() + "원" : ""
+                }`}
+              </div>
+            </div>
           ))}
-          {filtered.length === 0 && (
+          {!loading && !err && items.length === 0 && (
             <div className="empty">조건에 맞는 숙소가 없어요.</div>
           )}
         </div>

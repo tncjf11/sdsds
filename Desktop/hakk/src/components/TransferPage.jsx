@@ -1,3 +1,4 @@
+// src/components/TransferPage.jsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";
@@ -7,24 +8,20 @@ import transferImg from "../image/image21.png";
 import chatbotImg from "../image/image32.png";
 import roomImg from "../image/room-sample.png";
 
-// ✅ 더미 데이터(필요 시 API로 교체)
-const TRANSFER_LIST = [
-  "대곡빌라 / 150만원 / 바로입주",
-  "강남오피스텔 / 90만원 / 2월입주",
-  "판교원룸 / 85만원 / 3월입주",
-  "신림빌라 / 70만원 / 즉시입주",
-  "광교타워 / 110만원 / 협의",
-  "잠실오피스텔 / 95만원 / 2월입주",
-  "마포원룸 / 82만원 / 3월입주",
-  "용산빌라 / 120만원 / 협의",
-  "연남동투룸 / 140만원 / 즉시입주",
-  "서초오피스텔 / 100만원 / 2월입주",
-];
+// 백엔드 베이스 URL
+const API_BASE = "";
+
+// 썸네일 URL 조합 (상대경로면 API_BASE 붙이고, 없으면 기본 이미지)
+function buildImgUrl(u) {
+  if (!u) return roomImg;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+}
 
 const TransferPage = () => {
   const navigate = useNavigate();
 
-  // ====== 🔎 메인페이지와 동일한 검색 상태/로직 ======
+  // ====== 🔎 상단 검색 ======
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -55,17 +52,42 @@ const TransferPage = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  // ===== More+ 로직 =====
+  // ====== 데이터 로딩 ======
+  const [items, setItems] = useState([]); // TransferTopItem[]
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  async function fetchTransfers() {
+    const resp = await fetch(`${API_BASE}/api/listings/transfer`);
+    if (!resp.ok) {
+      const msg = await resp.text().catch(() => "");
+      throw new Error(`양도 목록 조회 실패 (${resp.status}) ${msg}`);
+    }
+    return resp.json();
+  }
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr("");
+    fetchTransfers()
+      .then((data) => { if (alive) setItems(Array.isArray(data) ? data : []); })
+      .catch((e) => { if (alive) setErr(e.message || String(e)); })
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, []);
+
+  // ===== More+ 페이지네이션 =====
   const PAGE_SIZE = 6;
   const [visible, setVisible] = useState(PAGE_SIZE);
-  const visibleList = useMemo(() => TRANSFER_LIST.slice(0, visible), [visible]);
-  const canLoadMore = visible < TRANSFER_LIST.length;
-  const handleMore = () => setVisible(v => Math.min(v + PAGE_SIZE, TRANSFER_LIST.length));
+  useEffect(() => setVisible(PAGE_SIZE), [items]);
+  const visibleList = useMemo(() => items.slice(0, visible), [items, visible]);
+  const canLoadMore = visible < items.length;
+  const handleMore = () => setVisible((v) => Math.min(v + PAGE_SIZE, items.length));
 
   // ===== 푸터 자동 위치 보정 =====
   const listRef = useRef(null);
   const [footerTop, setFooterTop] = useState(1667);
-
   useEffect(() => {
     const calcFooter = () => {
       const el = listRef.current;
@@ -77,23 +99,19 @@ const TransferPage = () => {
     };
     calcFooter();
     const imgs = listRef.current?.querySelectorAll("img") || [];
-    imgs.forEach(img => { if (!img.complete) img.addEventListener("load", calcFooter, { once: true }); });
+    imgs.forEach((img) => { if (!img.complete) img.addEventListener("load", calcFooter, { once: true }); });
     window.addEventListener("resize", calcFooter);
     const id = setTimeout(calcFooter, 0);
     return () => { window.removeEventListener("resize", calcFooter); clearTimeout(id); };
   }, [visibleList.length]);
 
-      // ✅ 상세로 이동 (state로 이미지/요약 전달)
-  const goDetail = (summary) => {
-    navigate("/detailtransfer", {
-      state: { img: roomImg, summary },
-    });
-  };
+  // ✅ 상세로 이동
+  const goDetail = (id) => navigate(`/transfer/${id}`);
 
   return (
     <div className="screen">
       <div className="container transfer-page">
-        {/* 🔎 우측 상단 검색(메인과 동일) */}
+        {/* 🔎 우측 상단 검색 */}
         <div className="top-search">
           <button
             ref={searchBtnRef}
@@ -159,17 +177,27 @@ const TransferPage = () => {
           More +
         </button>
 
+        {/* 리스트 */}
         <div className="transfer-list" ref={listRef}>
-          {visibleList.map((text, i) => (
-          <div
-            className="transfer-card"
-            key={i}
-            onClick={() => goDetail(text)} // ✅ 상세 페이지 이동
-          >
-        <img src={roomImg} alt="양도" className="transfer-image" />
-          <div className="transfer-text">{text}</div>
-        </div>
-        ))}
+          {loading && <div className="empty">불러오는 중...</div>}
+          {err && !loading && <div className="empty">오류: {err}</div>}
+          {!loading && !err && visibleList.map((item) => (
+            <div
+              className="transfer-card"
+              key={item.id}
+              onClick={() => goDetail(item.id)}
+            >
+              <img src={buildImgUrl(item.thumbnailUrl)} alt="양도" className="transfer-image" />
+              <div className="transfer-text">
+                {`${item.buildingName ?? ""} / ${
+                  item.price != null ? item.price.toLocaleString() + "원" : ""
+                }`}
+              </div>
+            </div>
+          ))}
+          {!loading && !err && items.length === 0 && (
+            <div className="empty">등록된 양도 매물이 없어요.</div>
+          )}
         </div>
 
         {/* 푸터 */}

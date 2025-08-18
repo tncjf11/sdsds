@@ -90,7 +90,6 @@
 
 /* =========================
    본문(라벨 → 결과 그리드)
-   절대배치 제거: 콘텐츠 흐름대로 아래로 쌓임
    ========================= */
 
 /* 라벨 */
@@ -108,22 +107,28 @@
   display: inline-block;
 }
 
-/* 결과 그리드: 화면 넓어지면 자동으로 열 수 증가 */
+/* 결과 그리드 */
 .search-page .results {
-  margin: 0 8%;                    /* 라벨과 정렬 맞춤 */
+  margin: 0 8%;                    
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px)); /* 최대폭 제한 */
   gap: 40px;
+  justify-content: center; /* 아이템이 몇 개 없을 때 가운데 정렬 */
 }
 .search-page .result-card {
   width: 100%;
+  max-width: 280px;   /* 카드 최대폭 제한 */
+  margin: 0 auto;     /* 중앙 정렬 */
   text-align: center;
 }
 .search-page .result-thumbnail {
   width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 56px;
+  aspect-ratio: 4 / 3;              /* 1:1 → 4:3 비율로 조정 */
+  border-radius: 20px;              /* 라운드 값 적당히 축소 */
   background-color: rgba(72, 72, 72, 0.35);
+  background-size: cover;           /* 이미지 꽉 채우기 */
+  background-position: center;
+  background-repeat: no-repeat;
 }
 .search-page .result-text {
   margin-top: 18px;
@@ -133,14 +138,14 @@
 }
 
 /* =========================
-   푸터: 콘텐츠 길이에 따라 자동 하단으로 밀림
+   푸터
    ========================= */
 .search-page .footer {
   text-align: center;
   font-family: "Inter", sans-serif;
   font-size: 28px;
   letter-spacing: 3.6px;
-  margin: 72px auto 28px;          /* 위로 여백만 주고, 위치는 흐름에 맡김 */
+  margin: 72px auto 28px;          
 }
 .search-page .footer-sub { font-size: 14px; }
 

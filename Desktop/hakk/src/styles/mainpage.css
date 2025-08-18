@@ -36,7 +36,7 @@
   object-fit: contain;
 }
 
-/* ── 우측 상단 검색(공통 규격: 버튼 32px) ── */
+/* ── 우측 상단 검색 ── */
 .top-search {
   position: absolute;
   top: 58px;
@@ -44,70 +44,42 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  white-space: nowrap;   /* 줄바꿈 방지 */
-  flex-wrap: nowrap;
 }
-
-/* 버튼: 전 페이지 동일 규격 */
 .top-search__toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;                 /* 고정 높이 */
-  padding: 0 14px;              /* 좌우 패딩 */
-  border: 1.5px solid #000;
-  border-radius: 9999px;
+  border: 1px solid #000;
   background: #000;
   color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
   cursor: pointer;
   font-family: "Inter", sans-serif;
   font-size: 14px;
-  line-height: 1;
 }
-.top-search__toggle svg {
-  width: 18px; height: 18px;
-  color: #fff;
-}
-.top-search__toggle:focus-visible {
-  outline: 2px solid #9ecbff;
-  outline-offset: 2px;
-}
+.top-search__toggle svg { color: #fff; }
 .top-search__label { line-height: 1; }
 
-/* 펼쳐지는 입력 영역(밑줄만 보이게) */
 .top-search__form {
-  display: inline-flex;          /* 한 줄 유지 */
-  align-items: flex-end;
-  flex: 0 0 auto;
-  width: 0;                      /* 닫힘 상태 */
-  opacity: 0;
+  width: 0;
   overflow: hidden;
-  border-bottom: 1.5px solid transparent;
-  transition:
-    width .28s ease,
-    opacity .18s ease,
-    border-color .18s ease;
+  transition: width .25s ease, border-bottom-color .25s ease;
+  border-bottom: 1px solid transparent;
 }
 .top-search__form.is-open {
-  width: 260px;                  /* 펼쳐질 너비 */
-  opacity: 1;
-  border-color: #000;            /* 밑줄 표시 */
+  width: 280px;
+  border-bottom: 1px solid #000;
 }
-
-/* 인풋 기본화(전역 둥근 테두리/보더 무시) */
 .top-search__input {
-  display: block;
   width: 100%;
-  border: none !important;
-  border-radius: 0 !important;
+  border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
-  letter-spacing: 0.02em;
-  padding: 6px 2px 4px;
-  box-shadow: none !important;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  padding: 4px 2px 6px;
 }
-.top-search__input::placeholder { color: #777; }
 
 /* 요약/태그 */
 .summary-box {
@@ -144,32 +116,21 @@
 .tag-outline-white { border: 1.5px solid #000; background: #fff; }
 .tag-filled { background: #000; color: #fff; }
 
-/* ===== 상단 3카테고리 ===== */
-.category-wrapper {
+/* 상단 3카테고리 카드 */
+.category-card {
   position: absolute;
   top: 684px;
-  left: 87px;
-  display: flex;
-  gap: 120px;
-  z-index: 2;
-}
-.category-card {
-  position: static !important;
   width: 287px;
   height: 302px;
   border-radius: 88px;
   text-align: center;
-  background-color: #E5E5E5; /* 기본 회색 (공통) */
   cursor: pointer;
-  transition: transform .2s ease;
-  border: 1.5px solid #000;
 }
-.category-card:hover { transform: scale(1.05); }
 .category-image {
   margin-top: 82px;
   width: 110px;
   height: 110px;
-  object-fit: contain;
+  object-fit: cover;
 }
 .category-label {
   margin-top: 10px;
@@ -178,22 +139,20 @@
   font-family: "Inter", sans-serif;
 }
 
-/* 🎨 메인페이지 전용 색상 */
-.main-page .category-wrapper .category-card:nth-child(1) { background-color: #D4E4E1; } /* 숙박 */
-.main-page .category-wrapper .category-card:nth-child(2) { background-color: #EFD7E4; } /* 양도 */
-.main-page .category-wrapper .category-card:nth-child(3) { background-color: #F3E1CB; } /* 업로드 */
-
 /* =========================
    TopList 섹션 (라벨 → 탭 → 캐러셀)
    ========================= */
+/* 섹션 자체 위치만 고정 */
 .toplist-section {
   position: absolute;
   left: 87px;
-  top: 1064px;
+  top: 1064px; /* 페이지에서 섹션 시작 위치 */
   width: calc(1280px - 2*87px);
 }
+
+/* 라벨은 섹션 안에서 흐름 배치 */
 .toplist-section .top-list-label {
-  position: relative;
+  position: relative;         /* absolute 제거 */
   display: inline-block;
   background: #000;
   color: #fff;
@@ -202,12 +161,15 @@
   font-size: 16px;
   font-family: "Inter", sans-serif;
 }
+
+/* 라벨 아래 탭 */
 .toplist-section .toplist-tabs {
-  position: relative;
-  margin-top: 20px;
+  position: relative;         /* absolute 제거 */
+  margin-top: 20px;           /* 라벨과 간격 */
   display: flex;
   gap: 12px;
 }
+
 .chip {
   appearance: none;
   border: 1.5px solid #000;
@@ -225,20 +187,20 @@
   color: #fff;
   border-color: #000;
 }
-/* 탭 선택/비선택 색상 고정 */
-.toplist-section .chip[aria-selected="true"] { background: #000; color: #fff; border-color: #000; }
-.toplist-section .chip[aria-selected="false"] { background: #fff; color: #000; border-color: #000; }
 
+/* ── 캐러셀: 섹션 안에서 흐름으로, 간격은 margin으로 ── */
 .toplist-section .carousel {
-  position: relative;
-  margin-top: 40px;
-  overflow: hidden;
+  position: relative;         /* absolute 제거 */
+  margin-top: 40px;           /* 탭과 간격 */
+  overflow: hidden;           /* 하드 컷 */
   width: 100%;
 }
+
 .carousel__viewport {
   position: relative;
   overflow: hidden;
   width: 100%;
+  /* 높이는 JSX에서 동적으로 주입 */
 }
 .carousel__track {
   position: absolute;
@@ -251,6 +213,8 @@
   will-change: transform;
 }
 .carousel__card { position: relative; flex: 0 0 auto; }
+
+/* 썸네일 기준 + 튀어나옴 방지 */
 .carousel__thumb {
   position: relative;
   width: 100%;
@@ -258,6 +222,8 @@
   border-radius: 49px;
   overflow: hidden;
 }
+
+/* 순위 배지 — 크게/선명 */
 .carousel__badge {
   position: absolute;
   left: 12px;
@@ -275,12 +241,16 @@
   line-height: 1;
   box-shadow: 0 2px 6px rgba(0,0,0,.08);
 }
+
+/* 카드 하단 텍스트 — 약간 크게 */
 .carousel__text {
   margin-top: 10px;
   font-size: 18px;
   font-family: "Inter", sans-serif;
   color: #000;
 }
+
+/* 좌우 네비 버튼 — 위치는 JSX 인라인(left/right:12px; transform:none) */
 .carousel__nav {
   position: absolute;
   top: 120px;
@@ -302,9 +272,10 @@
 /* =========================
    푸터
    ========================= */
+/* 푸터 */
 .footer-text {
   position: absolute;
-  top: 1300px;
+  top: 100px;
   left: 543px;
   text-align: center;
   font-size: 24px;
