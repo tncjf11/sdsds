@@ -1,5 +1,5 @@
 // src/components/UploadPage.jsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "./Header";
 import "../styles/mainpage.css";
@@ -9,7 +9,6 @@ import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import uploadImg from "../image/image32.png";
 import { setDraft } from "../utils/draft";
-
 
 export const TagGroup = () => (
   <div className="tag-group">
@@ -26,8 +25,6 @@ export const TagGroup = () => (
 );
 
 // ✅ 백엔드 베이스 URL
-// - 프록시(package.json "proxy")를 쓰면 빈 문자열("") 로 두고, 요청은 "/api/..." 로만 나갑니다.
-// - 프록시를 안 쓰면 .env에 REACT_APP_API_BASE=http://<IP>:<PORT> 를 설정하세요.
 const API_BASE = (process.env.REACT_APP_API_BASE ?? "").trim();
 
 // ---------- 유틸 ----------
@@ -90,21 +87,66 @@ const UploadPage = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  // 이미지 업로드(여러 장)
+  // ----------------------------
+  // 이미지 업로드(여러 장) + 캐러셀
+  // ----------------------------
   const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null);
+
+  // 원본 File 목록
   const [files, setFiles] = useState([]);
+  // 미리보기 URL 배열
+  const [urls, setUrls] = useState([]);
+  // 현재 인덱스
+  const [idx, setIdx] = useState(0);
 
   const onPickImage = () => fileInputRef.current?.click();
+
   const onFileChange = (e) => {
-    const list = Array.from(e.target.files ?? []);
+    const list = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
     setFiles(list);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(list[0] ? URL.createObjectURL(list[0]) : null);
+    setIdx(0);
   };
+
+  // object URL 생성 & 정리
   useEffect(() => {
-    return () => { if (preview) URL.revokeObjectURL(preview); };
-  }, [preview]);
+    // 이전 URL revoke
+    return () => {
+      // 언마운트 시 마지막 urls 정리
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // 새로 선택된 파일들로 URL 생성
+    const u = files.map((f) => URL.createObjectURL(f));
+    setUrls(u);
+    // 변경 전 URL 정리
+    return () => u.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
+
+  const hasImages = urls.length > 0;
+
+  const prev = useCallback(() => {
+    if (!hasImages) return;
+    setIdx((i) => (i - 1 + urls.length) % urls.length);
+  }, [hasImages, urls.length]);
+
+  const next = useCallback(() => {
+    if (!hasImages) return;
+    setIdx((i) => (i + 1) % urls.length);
+  }, [hasImages, urls.length]);
+
+  // 키보드 ←/→ 지원
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!hasImages) return;
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hasImages, prev, next]);
 
   // 탭 / 폼
   const guessInitialTab =
@@ -149,8 +191,7 @@ const UploadPage = () => {
       ...prev,
       [tab]: { ...prev[tab], ...iv },
     }));
-    // 서버에서 전달된 이미지 URL 미리보기 넣고 싶으면 여기에 세팅
-    // if (iv?.thumbnailUrl) setPreview(iv.thumbnailUrl);
+    // 서버 이미지 미리보기 필요 시 urls에 추가하는 로직을 별도로 넣을 수 있습니다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 최초 1회
 
@@ -195,9 +236,8 @@ const UploadPage = () => {
       fd.append("data", JSON.stringify(payload)); // key: "data"
       files.forEach((f) => fd.append("files", f)); // key: "files"
 
-    const resp = await fetch("/api/listings/with-upload", { method: "POST", body: fd });
+      const resp = await fetch("/api/listings/with-upload", { method: "POST", body: fd });
 
-    
       if (!resp.ok) {
         const msg = await resp.text().catch(() => "");
         throw new Error(`업로드 실패 (${resp.status}) ${msg}`);
@@ -279,7 +319,10 @@ const UploadPage = () => {
             role="search"
             className={`top-search__form ${searchOpen ? "is-open" : ""}`}
             aria-hidden={!searchOpen}
-            onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSearch();
+            }}
           >
             <input
               ref={inputRef}
@@ -343,16 +386,65 @@ const UploadPage = () => {
           </div>
 
           <div className="upload-grid">
-            {/* 좌: 이미지 카드 */}
-            <div className="upload-card" onClick={onPickImage} role="button" tabIndex={0}>
+            {/* 좌: 이미지 카드 (캐러셀) */}
+            <div
+              className="upload-card"
+              onClick={onPickImage}
+              role="button"
+              tabIndex={0}
+              aria-label="이미지 선택 또는 변경"
+            >
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
               <div className="upload-card__body">
-                {preview ? (
-                  <img src={preview} alt="preview" className="upload-preview" />
+                {hasImages ? (
+                  <>
+                    {/* 이전 버튼 */}
+                    <button
+                      className="carousel-btn carousel-btn--prev"
+                      type="button"
+                      aria-label="이전 이미지"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prev();
+                      }}
+                    >
+                      ←
+                    </button>
+
+                    <img
+                      src={urls[idx]}
+                      alt={`업로드 이미지 ${idx + 1}`}
+                      className="upload-preview"
+                      draggable={false}
+                    />
+
+                    {/* 다음 버튼 */}
+                    <button
+                      className="carousel-btn carousel-btn--next"
+                      type="button"
+                      aria-label="다음 이미지"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        next();
+                      }}
+                    >
+                      →
+                    </button>
+
+                    {/* 인덱스 표시 */}
+                    <div
+                      className="upload-counter"
+                      aria-live="polite"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {idx + 1} / {urls.length}
+                    </div>
+                  </>
                 ) : (
                   <span className="plus">+</span>
                 )}
+
                 <input
                   ref={fileInputRef}
                   type="file"

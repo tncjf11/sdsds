@@ -1,5 +1,5 @@
 // src/components/EditPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Header from "./Header";
 import "../styles/mainpage.css";
@@ -89,19 +89,48 @@ const EditPage = () => {
   // ✅ 타입 잠금 여부 (state 우선, 없으면 경로로 판단)
   const locked = state?.lockType === true || Boolean(routeTypeFromPath);
 
-  // ===== 이미지 선택(미리보기 & 업로드) =====
+  // ===== 이미지 선택(여러 장) + 캐러셀 =====
   const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null);
-  const [files, setFiles] = useState([]);
-  // 🔧 잠금과 무관하게 항상 이미지 선택 가능하도록 수정
+  const [files, setFiles] = useState([]);     // 원본 File[]
+  const [urls, setUrls] = useState([]);       // object URL[]
+  const [idx, setIdx] = useState(0);          // 현재 인덱스
+
   const onPickImage = () => fileInputRef.current?.click();
   const onFileChange = (e) => {
-    const list = Array.from(e.target.files ?? []);
+    const list = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
     setFiles(list);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(list[0] ? URL.createObjectURL(list[0]) : null);
+    setIdx(0);
   };
-  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  // 파일 변경 시 object URL 생성 + 정리
+  useEffect(() => {
+    const u = files.map((f) => URL.createObjectURL(f));
+    setUrls(u);
+    return () => u.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
+
+  const hasImages = urls.length > 0;
+
+  const prev = useCallback(() => {
+    if (!hasImages) return;
+    setIdx((i) => (i - 1 + urls.length) % urls.length);
+  }, [hasImages, urls.length]);
+
+  const next = useCallback(() => {
+    if (!hasImages) return;
+    setIdx((i) => (i + 1) % urls.length);
+  }, [hasImages, urls.length]);
+
+  // 키보드 ←/→ 지원
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!hasImages) return;
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hasImages, prev, next]);
 
   // ===== 탭: 기본값 결정
   const initialTab = useMemo(() => {
@@ -214,7 +243,6 @@ const EditPage = () => {
         try {
           await uploadPhotos(listingId, files);
         } catch (err) {
-          // 사진 업로드 실패해도 텍스트 수정은 진행 (원하면 여기서 return 하도록 변경 가능)
           console.warn(err);
           alert("사진 업로드에 실패했습니다. 텍스트 수정은 계속 진행합니다.");
         }
@@ -363,30 +391,81 @@ const EditPage = () => {
           <TabButtons />
 
           <div className="upload-grid">
-            {/* 좌: 이미지 카드 (미리보기) */}
+            {/* 좌: 이미지 카드 (캐러셀) */}
             <div
-              className={`upload-card ${/* 🔧 잠금이어도 업로드 가능하도록 막지 않음 */ ""}`}
+              className="upload-card"
               onClick={onPickImage}
               role="button"
               tabIndex={0}
               aria-disabled={false}
+              aria-label="이미지 선택 또는 변경"
             >
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
               <div className="upload-card__body">
-                {preview ? (
-                  <img src={preview} alt="preview" className="upload-preview" />
+                {hasImages ? (
+                  <>
+                    <button
+                      className="carousel-btn carousel-btn--prev"
+                      type="button"
+                      aria-label="이전 이미지"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prev();
+                      }}
+                    >
+                      ←
+                    </button>
+
+                    <img
+                      src={urls[idx]}
+                      alt={`업로드 이미지 ${idx + 1}`}
+                      className="upload-preview"
+                      draggable={false}
+                    />
+
+                    <button
+                      className="carousel-btn carousel-btn--next"
+                      type="button"
+                      aria-label="다음 이미지"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        next();
+                      }}
+                    >
+                      →
+                    </button>
+
+                    <div
+                      className="upload-counter"
+                      aria-live="polite"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {idx + 1} / {urls.length}
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onFileChange}
+                      hidden
+                    />
+                  </>
                 ) : (
-                  <span className="plus">+</span>
+                  <>
+                    <span className="plus">+</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onFileChange}
+                      hidden
+                    />
+                  </>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={onFileChange}
-                  hidden
-                />
               </div>
             </div>
 

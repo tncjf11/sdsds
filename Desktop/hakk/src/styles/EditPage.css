@@ -65,24 +65,14 @@
   border-radius: 38px;
   white-space: nowrap;
 }
-.edit-page .tag-outline {
-  border: 1.5px solid #000;
-}
-.edit-page .tag-outline-white {
-  border: 1.5px solid #000;
-  background-color: #fff;
-}
-.edit-page .tag-filled {
-  background-color: #000;
-  color: #fff;
-}
+.edit-page .tag-outline { border: 1.5px solid #000; }
+.edit-page .tag-outline-white { border: 1.5px solid #000; background-color: #fff; }
+.edit-page .tag-filled { background-color: #000; color: #fff; }
 
 /* =========================
    수정 페이지 공통 레이아웃
    ========================= */
-.edit-page .container {
-  padding-top: 990px;
-}
+.edit-page .container { padding-top: 990px; }
 
 /* 중앙 정렬 & 컨테이너 폭 */
 .edit-page .upload-inner {
@@ -122,24 +112,10 @@
   box-sizing: border-box;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
 }
-.edit-page .tab.tab--active {
-  background-color: #000;
-  color: #fff;
-  border-color: #000;
-}
-.edit-page .tab.tab--ghost {
-  background: #fff;
-  color: #000;
-  border-color: #000;
-  opacity: 0.6;        /* 비활성 느낌 */
-}
-.edit-page .tab:disabled {
-  opacity: 0.6;
-}
-.edit-page .tab:focus-visible {
-  outline: 2px dashed #666;
-  outline-offset: 3px;
-}
+.edit-page .tab.tab--active { background-color: #000; color: #fff; border-color: #000; }
+.edit-page .tab.tab--ghost { background: #fff; color: #000; border-color: #000; opacity: 0.6; }
+.edit-page .tab:disabled { opacity: 0.6; }
+.edit-page .tab:focus-visible { outline: 2px dashed #666; outline-offset: 3px; }
 
 /* =========================
    좌측 이미지 카드
@@ -151,7 +127,8 @@
   height: 520px;
   flex-shrink: 0;
   border-radius: 36px;
-  cursor: default;   /* 기본값: 교체 비활성 느낌, 필요 시 pointer로 변경 */
+  cursor: pointer;   /* 파일 선택을 클릭으로 열기 때문에 pointer 권장 */
+  /* 필요하면 아래로 바꿔도 됨: cursor: default; */
   outline: none;
 }
 .edit-page .upload-card__body {
@@ -165,26 +142,10 @@
   justify-content: center;
   z-index: 3;
 }
-.edit-page .upload-card__shadow {
-  position: absolute;
-  inset: 0;
-  border-radius: 36px;
-}
-.edit-page .shadow--1 {
-  background: #9b9b9b;
-  transform: translate(14px, 12px);
-  z-index: 1;
-}
-.edit-page .shadow--2 {
-  background: #bdbdbd;
-  transform: translate(24px, 20px);
-  z-index: 0;
-}
-.edit-page .plus {
-  font-size: 72px;
-  color: #fff;
-  line-height: 1;
-}
+.edit-page .upload-card__shadow { position: absolute; inset: 0; border-radius: 36px; }
+.edit-page .shadow--1 { background: #9b9b9b; transform: translate(14px, 12px); z-index: 1; }
+.edit-page .shadow--2 { background: #bdbdbd; transform: translate(24px, 20px); z-index: 0; }
+.edit-page .plus { font-size: 72px; color: #fff; line-height: 1; }
 .edit-page .upload-preview {
   width: 100%;
   height: 100%;
@@ -192,16 +153,43 @@
   border-radius: 36px;
 }
 
+/* === 추가: 캐러셀 화살표 / 카운터 === */
+.edit-page .carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid #000;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.edit-page .carousel-btn--prev { left: 12px; }
+.edit-page .carousel-btn--next { right: 12px; }
+.edit-page .carousel-btn:hover { background: #000; color: #fff; }
+
+.edit-page .upload-counter {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  z-index: 6;
+}
+
 /* =========================
    우측 폼
    ========================= */
-.edit-page .upload-form {
-  padding-top: 12px;
-}
+.edit-page .upload-form { padding-top: 12px; }
 
-.edit-page .title-line {
-  margin-bottom: 20px;
-}
+.edit-page .title-line { margin-bottom: 20px; }
 .edit-page .title-input {
   width: 100%;
   font-size: 36px;
@@ -211,9 +199,7 @@
   border: none;
   outline: none;
 }
-.edit-page .title-input::placeholder {
-  color: #b0b0b0;
-}
+.edit-page .title-input::placeholder { color: #b0b0b0; }
 .edit-page .underline {
   height: 2px;
   width: 90%;
@@ -222,20 +208,14 @@
 }
 
 /* 칩(입력칩) */
-.edit-page .chips {
-  all: unset;
-}
+.edit-page .chips { all: unset; }
 .edit-page .upload-form .chips {
   display: grid;
   gap: 16px;
   align-items: center;
 }
-.edit-page .upload-form .chips.is-transfer {
-  grid-template-columns: repeat(3, 1fr);
-}
-.edit-page .upload-form .chips.is-lodging {
-  grid-template-columns: repeat(4, 1fr);
-}
+.edit-page .upload-form .chips.is-transfer { grid-template-columns: repeat(3, 1fr); }
+.edit-page .upload-form .chips.is-lodging { grid-template-columns: repeat(4, 1fr); }
 .edit-page .upload-form .chip-input {
   width: 100%;
   height: 44px;
@@ -278,9 +258,7 @@
 }
 
 /* 에디터 */
-.edit-page .editor {
-  margin-top: 18px;
-}
+.edit-page .editor { margin-top: 18px; }
 .edit-page .editor-area {
   width: 100%;
   min-height: 160px;
@@ -294,12 +272,8 @@
   resize: vertical;
   text-align: left;
 }
-.edit-page .editor-area::placeholder {
-  color: #c7c7c7;
-}
-.edit-page .editor-area:placeholder-shown {
-  text-align: center;
-}
+.edit-page .editor-area::placeholder { color: #c7c7c7; }
+.edit-page .editor-area:placeholder-shown { text-align: center; }
 
 /* PIN + 버튼 */
 .edit-page .bottom-actions {
@@ -309,15 +283,8 @@
   gap: 14px;
   margin-top: 28px;
 }
-.edit-page .pin-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.edit-page .pin-label {
-  color: #555;
-  letter-spacing: 1px;
-}
+.edit-page .pin-wrap { display: flex; align-items: center; gap: 8px; }
+.edit-page .pin-label { color: #555; letter-spacing: 1px; }
 .edit-page .pin-input {
   width: 96px;
   height: 38px;
@@ -337,9 +304,7 @@
   cursor: pointer;
   font-weight: 700;
 }
-.edit-page .upload-btn:hover {
-  opacity: 0.92;
-}
+.edit-page .upload-btn:hover { opacity: 0.92; }
 
 /* 푸터 */
 .edit-page .footer-text {
@@ -351,20 +316,16 @@
   letter-spacing: 3.36px;
   font-family: "Inter", sans-serif;
 }
-.edit-page .footer-sub {
-  font-size: 12px;
-  line-height: 1.3;
-}
+.edit-page .footer-sub { font-size: 12px; line-height: 1.3; }
+
+/* ===== 유틸리티 (JSX에서 사용) ===== */
+.pointer-events-none { pointer-events: none; }
+.opacity-70 { opacity: 0.7; }
 
 /* 반응형 */
 @media (max-width: 1200px) {
-  .edit-page .upload-inner {
-    max-width: 600px;
-  }
-  .edit-page .upload-grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
+  .edit-page .upload-inner { max-width: 600px; }
+  .edit-page .upload-grid { grid-template-columns: 1fr; gap: 32px; }
   .edit-page .upload-card {
     width: 100%;
     max-width: 520px;
