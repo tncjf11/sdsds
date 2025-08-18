@@ -144,10 +144,10 @@ const DetailLodging = () => {
   /* ===== 수정: 반드시 수정페이지로 이동 ===== */
   const toEdit = () => {
     if (!data) return;
-    navigate(`/lodging/edit/${data.id}`, {
+    navigate(`/lodging/edit/${id}`, {
       state: {
         type: "lodging", // 탭 고정 기본값
-        roomId: data.id,
+        roomId: id,
         initialValues: {
           building: data.buildingName || "",
           content: data.description || "",

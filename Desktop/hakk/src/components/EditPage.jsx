@@ -8,7 +8,9 @@ import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import editImg from "../image/image32.png";
 
-// ===== 유틸 =====
+/* =========================
+   유틸
+   ========================= */
 const pad2 = (n) => String(n).padStart(2, "0");
 function parseDateRange(input) {
   if (!input) return { startDate: null, endDate: null };
@@ -32,7 +34,9 @@ const toInt = (v) => {
 const tabToType = (tab) => (tab === "lodging" ? "STAY" : "TRANSFER");
 const typeToTab = (type) => (type === "STAY" ? "lodging" : "transfer");
 
-// ===== API (fetch 사용) =====
+/* =========================
+   API
+   ========================= */
 async function patchListing(id, body) {
   const resp = await fetch(`/api/listings/${id}`, {
     method: "PATCH",
@@ -46,16 +50,32 @@ async function patchListing(id, body) {
   return resp.json().catch(() => ({}));
 }
 
+/* =========================
+   컴포넌트
+   ========================= */
 const EditPage = () => {
   const navigate = useNavigate();
   const { id: idFromParams } = useParams();
-  const { state } = useLocation(); // { type, roomId, initialValues }
+  const { state, pathname } = useLocation();
+
+  // ✅ id 확보(모든 경로 커버)
+  const listingId = idFromParams ?? state?.roomId ?? state?.id ?? state?.initialValues?.id;
+
+  // ✅ 경로로 타입 추론 (새로고침 대비)
+  const routeTypeFromPath = pathname?.includes("/transfer/edit/")
+    ? "transfer"
+    : pathname?.includes("/lodging/edit/")
+    ? "lodging"
+    : undefined;
+
+  // ✅ 타입 잠금 여부 (state 우선, 없으면 경로로 판단)
+  const locked = state?.lockType === true || Boolean(routeTypeFromPath);
 
   // ===== 이미지 선택(미리보기만; 파일 업로드는 별도 API 필요) =====
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
   const [files, setFiles] = useState([]);
-  const onPickImage = () => fileInputRef.current?.click();
+  const onPickImage = () => !locked && fileInputRef.current?.click(); // 잠금이어도 미리보기만 허용하려면 !locked 제거
   const onFileChange = (e) => {
     const list = Array.from(e.target.files ?? []);
     setFiles(list);
@@ -64,13 +84,20 @@ const EditPage = () => {
   };
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
-  // ===== 탭: 상세에서 온 타입이 기본값이지만, 수정페이지에서는 전환 가능 =====
+  // ===== 탭: 기본값 결정
   const initialTab = useMemo(() => {
+    if (locked) return routeTypeFromPath || state?.type || "transfer";
     if (state?.type === "lodging" || state?.type === "transfer") return state.type;
     if (state?.initialValues?.date !== undefined) return "lodging";
     return "transfer";
-  }, [state]);
+  }, [locked, routeTypeFromPath, state]);
+
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  // locked면 탭을 고정(사용자가 바꿔도 되돌림)
+  useEffect(() => {
+    if (locked && activeTab !== initialTab) setActiveTab(initialTab);
+  }, [locked, activeTab, initialTab]);
 
   // ===== 폼 =====
   const [forms, setForms] = useState({
@@ -112,31 +139,27 @@ const EditPage = () => {
   }, [searchOpen]);
 
   // ===== 초기값: state.initialValues 우선, 없으면 GET /api/listings/:id =====
-  const listingId = idFromParams ?? state?.roomId; // ← 항상 params 우선 (undefined 방지)
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    // 상세에서 넘겨준 값 사용
     if (state?.initialValues) {
       const tab = initialTab;
       setForms((prev) => ({ ...prev, [tab]: { ...prev[tab], ...state.initialValues } }));
       return;
     }
-    // 직접 새로고침 등으로 들어온 경우 서버에서 로드
     if (!listingId) return;
     setLoading(true);
     (async () => {
       try {
         const resp = await fetch(`/api/listings/${listingId}`);
         if (!resp.ok) throw new Error("상세 불러오기에 실패했습니다.");
-        const data = await resp.json(); // { type:'STAY'|'TRANSFER', ... }
-        const tab = typeToTab(data?.type);
+        const data = await resp.json(); // { id, type:'STAY'|'TRANSFER', ... }
+        const tab = locked ? initialTab : typeToTab(data?.type);
         const next = { ...forms[tab] };
         next.building = data?.buildingName ?? "";
         next.content = data?.description ?? "";
         next.address = data?.address ?? "";
         if (tab === "lodging") {
-          next.date =
-            data?.startDate && data?.endDate ? `${data.startDate} ~ ${data.endDate}` : "";
+          next.date = data?.startDate && data?.endDate ? `${data.startDate} ~ ${data.endDate}` : "";
           next.people = data?.guests != null ? String(data.guests) : "";
           next.amount = data?.price != null ? String(data.price) : "";
         } else {
@@ -144,7 +167,7 @@ const EditPage = () => {
             data?.startDate && data?.endDate ? `${data.startDate} ~ ${data.endDate}` : "";
           next.price = data?.price != null ? String(data.price) : "";
         }
-        setActiveTab(tab); // 서버 타입 기준으로 탭 맞추되, 이후 사용자가 변경 가능
+        setActiveTab(tab);
         setForms((prev) => ({ ...prev, [tab]: next }));
       } catch (e) {
         console.error(e);
@@ -156,23 +179,26 @@ const EditPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
-  // ===== 제출: PATCH /api/listings/{id} (type 반영) =====
+  // ===== 제출: PATCH /api/listings/{id} (type 반영; 잠금 시 고정) =====
   const onUpdate = async () => {
     try {
       if (!listingId) return alert("잘못된 접근입니다 (id 없음)");
       if (!form.building?.trim()) return alert("건물명을 입력해 주세요.");
       if (!pinConfirm?.trim()) return alert("업로드 시 사용한 PIN을 입력해 주세요.");
 
-      const chosenType = tabToType(activeTab); // 'STAY' | 'TRANSFER'
+      // 잠금이면 경로/상태 기준으로 타입 강제 고정
+      const lockedTab = locked ? (routeTypeFromPath || state?.type || "transfer") : activeTab;
+      const chosenType = tabToType(lockedTab); // 'STAY' | 'TRANSFER'
+
       const body = {
-        type: chosenType, // ← 탭에서 선택한 최종 타입을 백엔드에 전달
+        type: chosenType,
         pin: pinConfirm.trim(),
         buildingName: form.building?.trim(),
         description: form.content || undefined,
         address: form.address || undefined,
       };
 
-      if (activeTab === "lodging") {
+      if (lockedTab === "lodging") {
         const { startDate, endDate } = parseDateRange(form.date);
         if (startDate) body.startDate = startDate;
         if (endDate) body.endDate = endDate;
@@ -198,6 +224,48 @@ const EditPage = () => {
       console.error(e);
       alert(String(e.message ?? e));
     }
+  };
+
+  /* =========================
+     렌더
+     ========================= */
+  // 잠금 모드에서 상단 카테고리 카드 클릭 방지
+  const safeNav = (path) => () => {
+    if (locked) return; // 잠금이면 무시
+    navigate(path);
+  };
+
+  // 탭 버튼 (잠금이면 전환 비활성화)
+  const TabButtons = () => {
+    if (locked) {
+      return (
+        <div className="upload-tabs">
+          <button type="button" className="tab tab--active" disabled>
+            {initialTab === "lodging" ? "숙박" : "양도"}
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className="upload-tabs">
+        <button
+          type="button"
+          className={`tab ${activeTab === "transfer" ? "tab--active" : "tab--ghost"}`}
+          onClick={() => setActiveTab("transfer")}
+          aria-pressed={activeTab === "transfer"}
+        >
+          양도
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === "lodging" ? "tab--active" : "tab--ghost"}`}
+          onClick={() => setActiveTab("lodging")}
+          aria-pressed={activeTab === "lodging"}
+        >
+          숙박
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -244,11 +312,11 @@ const EditPage = () => {
 
         {/* 카테고리 카드 */}
         <div className="category-wrapper">
-          <div className="category-card" onClick={() => navigate("/lodging")}>
+          <div className={`category-card ${locked ? "pointer-events-none opacity-70" : ""}`} onClick={safeNav("/lodging")}>
             <img src={lodgingImg} alt="숙박" className="category-image" />
             <div className="category-label">숙박</div>
           </div>
-          <div className="category-card" onClick={() => navigate("/transfer")}>
+          <div className={`category-card ${locked ? "pointer-events-none opacity-70" : ""}`} onClick={safeNav("/transfer")}>
             <img src={transferImg} alt="양도" className="category-image" />
             <div className="category-label">양도</div>
           </div>
@@ -260,29 +328,18 @@ const EditPage = () => {
 
         {/* 본문 */}
         <section className="upload-inner">
-          {/* 탭: 전환 가능 */}
-          <div className="upload-tabs">
-            <button
-              type="button"
-              className={`tab ${activeTab === "transfer" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setActiveTab("transfer")}
-              aria-pressed={activeTab === "transfer"}
-            >
-              양도
-            </button>
-            <button
-              type="button"
-              className={`tab ${activeTab === "lodging" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setActiveTab("lodging")}
-              aria-pressed={activeTab === "lodging"}
-            >
-              숙박
-            </button>
-          </div>
+          {/* 탭(잠금이면 단일 탭) */}
+          <TabButtons />
 
           <div className="upload-grid">
             {/* 좌: 이미지 카드 (미리보기) */}
-            <div className="upload-card" onClick={onPickImage} role="button" tabIndex={0}>
+            <div
+              className={`upload-card ${locked ? "pointer-events-none opacity-80" : ""}`}
+              onClick={onPickImage}
+              role="button"
+              tabIndex={0}
+              aria-disabled={locked}
+            >
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
               <div className="upload-card__body">

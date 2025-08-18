@@ -144,10 +144,10 @@ const DetailTransfer = () => {
   /* ===== 수정: 반드시 수정페이지로 이동 ===== */
   const toEdit = () => {
     if (!data) return;
-    navigate(`/transfer/edit/${data.id}`, {
+    navigate(`/transfer/edit/${id}`, {
       state: {
         type: "transfer", // 탭 기본값
-        roomId: data.id,
+        roomId: id,
         initialValues: {
           building: data.buildingName || "",
           content: data.description || "",
