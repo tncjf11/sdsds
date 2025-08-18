@@ -50,6 +50,24 @@ async function patchListing(id, body) {
   return resp.json().catch(() => ({}));
 }
 
+/** 사진 업로드 (여러 장) : 서버 엔드포인트에 맞춰 경로만 조정하세요.
+ *  성공/실패와 무관하게 이후 PATCH는 계속 진행합니다.
+ */
+async function uploadPhotos(id, fileList) {
+  if (!fileList?.length) return;
+  const fd = new FormData();
+  fileList.forEach((f) => fd.append("files", f)); // 서버에서 필드명을 "files"로 받는다고 가정
+  const resp = await fetch(`/api/listings/${id}/photos`, {
+    method: "POST",
+    body: fd, // Content-Type 자동 설정됨
+  });
+  if (!resp.ok) {
+    const msg = await resp.text().catch(() => "");
+    throw new Error(`사진 업로드 실패 (${resp.status}) ${msg}`);
+  }
+  return resp.json().catch(() => ({}));
+}
+
 /* =========================
    컴포넌트
    ========================= */
@@ -71,11 +89,12 @@ const EditPage = () => {
   // ✅ 타입 잠금 여부 (state 우선, 없으면 경로로 판단)
   const locked = state?.lockType === true || Boolean(routeTypeFromPath);
 
-  // ===== 이미지 선택(미리보기만; 파일 업로드는 별도 API 필요) =====
+  // ===== 이미지 선택(미리보기 & 업로드) =====
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
   const [files, setFiles] = useState([]);
-  const onPickImage = () => !locked && fileInputRef.current?.click(); // 잠금이어도 미리보기만 허용하려면 !locked 제거
+  // 🔧 잠금과 무관하게 항상 이미지 선택 가능하도록 수정
+  const onPickImage = () => fileInputRef.current?.click();
   const onFileChange = (e) => {
     const list = Array.from(e.target.files ?? []);
     setFiles(list);
@@ -179,7 +198,7 @@ const EditPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
-  // ===== 제출: PATCH /api/listings/{id} (type 반영; 잠금 시 고정) =====
+  // ===== 제출: 사진 업로드(있으면) + PATCH /api/listings/{id} =====
   const onUpdate = async () => {
     try {
       if (!listingId) return alert("잘못된 접근입니다 (id 없음)");
@@ -190,6 +209,18 @@ const EditPage = () => {
       const lockedTab = locked ? (routeTypeFromPath || state?.type || "transfer") : activeTab;
       const chosenType = tabToType(lockedTab); // 'STAY' | 'TRANSFER'
 
+      // 1) 사진 업로드(선택되어 있으면)
+      if (files.length > 0) {
+        try {
+          await uploadPhotos(listingId, files);
+        } catch (err) {
+          // 사진 업로드 실패해도 텍스트 수정은 진행 (원하면 여기서 return 하도록 변경 가능)
+          console.warn(err);
+          alert("사진 업로드에 실패했습니다. 텍스트 수정은 계속 진행합니다.");
+        }
+      }
+
+      // 2) 나머지 정보 PATCH
       const body = {
         type: chosenType,
         pin: pinConfirm.trim(),
@@ -334,11 +365,11 @@ const EditPage = () => {
           <div className="upload-grid">
             {/* 좌: 이미지 카드 (미리보기) */}
             <div
-              className={`upload-card ${locked ? "pointer-events-none opacity-80" : ""}`}
+              className={`upload-card ${/* 🔧 잠금이어도 업로드 가능하도록 막지 않음 */ ""}`}
               onClick={onPickImage}
               role="button"
               tabIndex={0}
-              aria-disabled={locked}
+              aria-disabled={false}
             >
               <div className="upload-card__shadow shadow--1" />
               <div className="upload-card__shadow shadow--2" />
