@@ -1,13 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // ✅ 변경
 import Header from "./Header";
 import "../styles/mainpage.css";
 import "../styles/UploadPage.css";
 
-import house from "../image/house.png";
 import lodgingImg from "../image/image19.png";
 import transferImg from "../image/image21.png";
 import uploadImg from "../image/image32.png";
+import { setDraft } from "../utils/draft"; // ✅ 추가
 
 export const TagGroup = () => (
   <div className="tag-group">
@@ -28,6 +28,7 @@ const API_BASE = process.env.REACT_APP_API_BASE ?? "http://localhost:5000";
 
 const UploadPage = () => {
   const navigate = useNavigate();
+  const { state } = useLocation(); // ✅ { mode, roomId, type, initialValues } 가능
 
   // ====== 🔎 메인/숙박과 동일한 검색 토글/폼 상태 ======
   const [searchOpen, setSearchOpen] = useState(false);
@@ -46,6 +47,7 @@ const UploadPage = () => {
     const q = query.trim();
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
+
   // 바깥 클릭 시 닫기 + 버튼 포커스 복귀
   useEffect(() => {
     const onDocMouseDown = (e) => {
@@ -60,9 +62,51 @@ const UploadPage = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchOpen]);
 
-  // ===== 이미지 업로드(미리보기) =====
+  // 이미지 업로드
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
+
+  // 현재 탭: transfer | lodging
+  const [activeTab, setActiveTab] = useState(
+    state?.type ?? (state?.initialValues?.date !== undefined ? "lodging" : "transfer") // ✅ 초기 탭 추정
+  );
+
+  // 탭별 폼 (완전 분리)
+  const [forms, setForms] = useState({
+    transfer: {
+      building: "",
+      content: "",
+      pin: "",
+      address: "",
+      price: "",
+      period: "",
+    },
+    lodging: {
+      building: "",
+      content: "",
+      pin: "",
+      date: "",
+      people: "",
+      amount: "",
+      address: "",
+    },
+  });
+
+  const form = forms[activeTab];
+
+  // 공통 폼 변경
+  const onFormChange = (field) => (e) => {
+    const value = e.target.value;
+    setForms((prev) => ({
+      ...prev,
+      [activeTab]: {
+        ...prev[activeTab],
+        [field]: value,
+      },
+    }));
+  };
+
+  // 이미지 처리
   const onPickImage = () => fileInputRef.current?.click();
   const onFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -70,32 +114,49 @@ const UploadPage = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(URL.createObjectURL(file));
   };
-  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
-  // ===== 탭: transfer | lodging | ai =====
-  const [activeTab, setActiveTab] = useState("transfer");
-  const [aiBusy, setAiBusy] = useState(false);
-
-  const [forms, setForms] = useState({
-    transfer: { building: "", content: "", pin: "", address: "", price: "", period: "" },
-    lodging:  { building: "", content: "", pin: "", date: "", people: "", amount: "", address: "" },
-    ai:       { content: "" }, // AI 글수정: 본문만 사용
-  });
-  const form = forms[activeTab];
-
-  const onFormChange = (field) => (e) => {
-    const value = e.target.value;
+  // ✅ 상세→수정 진입 시 폼 초기값 주입
+  useEffect(() => {
+    const iv = state?.initialValues;
+    if (!iv) return;
+    const guessTab = state?.type ?? (iv?.date !== undefined ? "lodging" : "transfer");
+    setActiveTab(guessTab);
     setForms((prev) => ({
       ...prev,
-      [activeTab]: { ...prev[activeTab], [field]: value },
+      [guessTab]: {
+        ...prev[guessTab],
+        ...iv,
+      },
     }));
-  };
+    // 이미지 프리뷰를 초기화하고 싶다면, 서버/상세에서 넘어온 이미지 URL 키에 맞춰 사용
+    // if (iv?.img && typeof iv.img === "string") setPreview(iv.img);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 최초 1회만
 
-  const onUpload = () => {
+  // 업로드(목업)
+  const onUpload = async () => {
     const payload = { type: activeTab, ...forms[activeTab] };
     console.log("upload payload:", payload);
+
+    // ✅ 업로드 "직전" 스냅샷 저장 — 백엔드 붙여도 이 줄은 그대로 유지
+    const roomId = state?.roomId ?? payload?.id ?? payload?.building ?? "unknown";
+    setDraft(roomId, payload);
+
+    // TODO: 실제 업로드(fetch/axios)로 교체해도 됨
+    // await fetch(...) / await api.upload(payload)
+
     alert("업로드 완료(목업)!");
+    // 업로드 후 이동이 필요하면 아래 예시 사용:
+    // navigate("/lodging", { replace: true });
   };
+
+  // ===== AI 글쓰기: 현재 탭의 content만 서버로 보내서 대체 =====
+  const [aiBusy, setAiBusy] = useState(false);
 
   async function postJSON(path, body) {
     const resp = await fetch(`${API_BASE}${path}`, {
@@ -118,7 +179,12 @@ const UploadPage = () => {
     }
     setAiBusy(true);
     try {
-      const data = await postJSON("/ai/rewrite", { type: activeTab, content });
+      // 예: POST /ai/rewrite  -> { content: "...", type: "transfer"|"lodging" }
+      const data = await postJSON("/ai/rewrite", {
+        type: activeTab,
+        content,
+      });
+
       const improved = data?.content ?? "";
       setForms((prev) => ({
         ...prev,
@@ -135,7 +201,6 @@ const UploadPage = () => {
   return (
     <div className="screen upload-page">
       <div className="container">
-        {/* 🔎 우측 상단 검색 (메인/숙박 동일 UI/동작) */}
         <div className="top-search">
           <button
             ref={searchBtnRef}
@@ -171,26 +236,8 @@ const UploadPage = () => {
             />
           </form>
         </div>
-
-        {/* 공용 헤더 + 홈 이미지 클릭 시 메인으로 이동 */}
+        {/* 공용 헤더 */}
         <Header />
-        <div className="header">
-          <h1 className="main-title">
-            FIT ROOM<br />_Finding <br /> a house that suits me
-          </h1>
-          <img
-            src={house}
-            alt="house"
-            className="house-image"
-            style={{ cursor: "pointer" }}
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/")}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate("/")}
-          />
-        </div>
-
-        {/* 카테고리 (숙박 페이지와 동일 구조) */}
         <div className="category-wrapper">
           <div className="category-card" onClick={() => navigate("/lodging")}>
             <img src={lodgingImg} alt="숙박" className="category-image" />
@@ -213,9 +260,8 @@ const UploadPage = () => {
         </div>
         <TagGroup />
 
-        {/* 본문: 업로드 폼 */}
         <section className="upload-inner">
-          {/* 탭: 양도/숙박/AI 글수정 */}
+          {/* 탭 버튼: 두 개만 */}
           <div className="upload-tabs">
             <button
               type="button"
@@ -225,6 +271,7 @@ const UploadPage = () => {
             >
               양도
             </button>
+
             <button
               type="button"
               className={`tab ${activeTab === "lodging" ? "tab--active" : "tab--ghost"}`}
@@ -232,14 +279,6 @@ const UploadPage = () => {
               aria-pressed={activeTab === "lodging"}
             >
               숙박
-            </button>
-            <button
-              type="button"
-              className={`tab ${activeTab === "ai" ? "tab--active" : "tab--ghost"}`}
-              onClick={() => setActiveTab("ai")}
-              aria-pressed={activeTab === "ai"}
-            >
-              AI 글수정
             </button>
           </div>
 
@@ -271,138 +310,133 @@ const UploadPage = () => {
                 <input
                   className="title-input"
                   placeholder="건물명"
-                  value={form.building ?? ""}
+                  value={form.building}
                   onChange={onFormChange("building")}
                 />
                 <div className="underline" />
               </div>
 
-              {/* 칩 영역 - AI 탭이면 숨김 */}
-              {activeTab !== "ai" && (
-                <div className={`chips ${activeTab === "lodging" ? "is-lodging" : "is-transfer"}`}>
-                  {activeTab === "lodging" ? (
-                    <>
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="날짜 (예: 11.2 ~ 11.5)"
-                        value={form.date ?? ""}
-                        onChange={onFormChange("date")}
-                      />
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="인원수 (예: 2명)"
-                        value={form.people ?? ""}
-                        onChange={onFormChange("people")}
-                      />
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="금액 (예: 50만원)"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={form.amount ?? ""}
-                        onChange={onFormChange("amount")}
-                      />
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="주소"
-                        value={form.address ?? ""}
-                        onChange={onFormChange("address")}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="주소"
-                        value={form.address ?? ""}
-                        onChange={onFormChange("address")}
-                      />
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="가격 (예: 150만원)"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={form.price ?? ""}
-                        onChange={onFormChange("price")}
-                      />
-                      <input
-                        className="chip-input"
-                        type="text"
-                        placeholder="기간 (예: 바로입주 / 11.2~11.5)"
-                        value={form.period ?? ""}
-                        onChange={onFormChange("period")}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
+              {/* 칩 영역 */}
+              <div className={`chips ${activeTab === "lodging" ? "is-lodging" : "is-transfer"}`}>
+                {activeTab === "lodging" ? (
+                  <>
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="날짜 (예: 11.2 ~ 11.5)"
+                      value={form.date}
+                      onChange={onFormChange("date")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="인원수 (예: 2명)"
+                      value={form.people}
+                      onChange={onFormChange("people")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="금액 (예: 50만원)"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={form.amount}
+                      onChange={onFormChange("amount")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="주소"
+                      value={form.address}
+                      onChange={onFormChange("address")}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="주소"
+                      value={form.address}
+                      onChange={onFormChange("address")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="가격 (예: 150만원)"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={form.price}
+                      onChange={onFormChange("price")}
+                    />
+                    <input
+                      className="chip-input"
+                      type="text"
+                      placeholder="기간 (예: 바로입주 / 11.2~11.5)"
+                      value={form.period}
+                      onChange={onFormChange("period")}
+                    />
+                  </>
+                )}
+              </div>
 
-              {/* 요약 */}
+              {/* 요약 라인 */}
               <div className="summary summary--form">
-                {activeTab === "ai"
-                  ? "AI 글수정: 아래 본문을 입력하고 버튼을 눌러주세요."
-                  : activeTab === "lodging"
+                {activeTab === "lodging"
                   ? form.date || form.people || form.amount || form.address
                     ? `${form.date || ""} / ${form.people || ""} / ${form.amount || ""} / ${form.address || ""}`
                     : "11.2~11.5 / 2명 / 50만원 / ○○빌라"
                   : form.address || form.price || form.period
-                  ? `${form.address || ""} / ${form.price || ""} / ${form.period || ""}`
-                  : "○○빌라 / 150만원 / 바로입주"}
+                    ? `${form.address || ""} / ${form.price || ""} / ${form.period || ""}`
+                    : "○○빌라 / 150만원 / 바로입주"}
               </div>
 
               {/* 본문 */}
               <div className="editor">
                 <textarea
                   className="editor-area"
-                  value={form.content ?? ""}
+                  value={form.content}
                   onChange={onFormChange("content")}
                   placeholder="글쓰기 / 고객과의 컨택을 위한 연락처를 남겨주세요!"
                 />
               </div>
 
-              {/* 하단 버튼 */}
+              {/* 하단: PIN + 업로드 + AI 글쓰기 */}
               <div className="bottom-actions">
-                {activeTab === "ai" ? (
-                  <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
-                    {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
-                  </button>
-                ) : (
-                  <>
-                    <div className="pin-wrap">
-                      <label className="pin-label">PIN</label>
-                      <input
-                        className="pin-input"
-                        value={form.pin ?? ""}
-                        onChange={onFormChange("pin")}
-                        maxLength={6}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                      />
-                    </div>
-                    <button className="upload-btn" onClick={onUpload}>업로드</button>
-                    <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
-                      {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
-                    </button>
-                  </>
-                )}
+                <div className="pin-wrap">
+                  <label className="pin-label">PIN</label>
+                  <input
+                    className="pin-input"
+                    value={form.pin}
+                    onChange={onFormChange("pin")}
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+
+                <button className="upload-btn" onClick={onUpload}>
+                  업로드
+                </button>
+
+                <button className="upload-btn" onClick={onAiRewrite} disabled={aiBusy}>
+                  {aiBusy ? "AI 처리 중..." : "AI 글쓰기"}
+                </button>
               </div>
             </div>
           </div>
         </section>
 
         <div className="footer-text">
-          FIT ROOM<br />
-          <span className="footer-sub">_Finding<br /> a house that suits me</span>
+          FIT ROOM
+          <br />
+          <span className="footer-sub">
+            _Finding a house that suits me
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-export default UploadPage;  
+export default UploadPage;

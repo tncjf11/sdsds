@@ -30,8 +30,8 @@
 
 .search-page .house-icon {
   position: absolute;
-  top: 0;
-  left: 260px;
+  top: 8px;
+  left: 300px;
   width: 340px;
   height: auto;
 }
@@ -95,7 +95,8 @@
 
 /* 라벨 */
 .search-page .section-label {
-  margin: 40px 8% 12px;            /* 컨테이너 안쪽 좌우 여백 느낌 */
+  margin: 40px 8% 40px;
+  text-align: center; 
 }
 .search-page .label-chip {
   background: #000;
@@ -147,10 +148,3 @@
 @media (prefers-reduced-motion: reduce) {
   .search-page .search-bar { transition: none; }
 }
-
-/* 넓은 화면 살짝 더 키우고 싶다면 선택적으로 사용
-@media (min-width: 1680px) {
-  .search-page .container { width: min(94%, 1600px); }
-  .search-page .search-bar { width: min(76%, 1040px); }
-}
-*/

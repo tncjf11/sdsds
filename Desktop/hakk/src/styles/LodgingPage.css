@@ -80,7 +80,8 @@
 .lodging-page .filter-bar {
   position: absolute;
   top: 1060px;
-  left: 87px;
+  left: 300px;
+  transform: translateX(-15%);
   display: flex;
   gap: 10px;
   align-items: center;
@@ -98,58 +99,21 @@
   background: #fff;
   font-family: "Inter", sans-serif;
 }
-
-/* ✅ 라벨/초기화 텍스트는 항상 보이게(숨김/축소 방지) */
-.lodging-page .chip .chip-label,
-.lodging-page .clear-chip {
-  flex-shrink: 0;
-  white-space: nowrap;
-  color: #000;
-  font-size: 14px;
-}
-
-/* ----- 입력 폭 제어(바가 길게 늘어나는 문제 해결) ----- */
-/* 건물명 칩(텍스트) */
-.lodging-page .chip.input-chip input[type="text"] {
-  flex: 0 0 120px;      /* 기본 120px 차지 */
-  min-width: 110px;
-  max-width: 140px;     /* 과도하게 늘어나는 것 방지 */
-  width: auto;
-}
-
-/* 금액 칩(숫자 2개) */
-.lodging-page .chip.input-chip input[type="number"] {
-  flex: 0 0 80px;       /* 각 80px */
-  min-width: 70px;
-  max-width: 90px;
-  width: auto;
-  text-align: right;
-}
-
-/* 날짜 칩(시작/종료) */
-.lodging-page .chip.date-chip input {
-  flex: 0 0 145px;      /* 기존 width:145px을 flex-basis로 명시 */
-  min-width: 130px;
-  max-width: 160px;
-  width: auto;
-}
-
-/* 공통 입력 기본값(혹시 다른 타입 추가될 때 대비) */
 .lodging-page .chip input {
   border: none;
   outline: none;
   background: transparent;
   font-size: 14px;
+  width: 90px;               /* ✅ 금액 범위 2칸 대응 (기존 120 → 90) */
 }
-
 .lodging-page .chip .chip-label { font-size: 14px; }
+.lodging-page .chip.date-chip input { width: 145px; }
 .lodging-page .chip .tilde { opacity: .6; }
 .lodging-page .chip .won { font-size: 13px; opacity: .8; }
 
 .lodging-page .clear-chip {
   cursor: pointer;
   transition: opacity .15s ease;
-  padding: 6px 14px;     /* 텍스트 가독성 유지 */
 }
 .lodging-page .clear-chip:hover { opacity: .7; }
 
@@ -172,16 +136,14 @@
 /* ===== 숙박 리스트 ===== */
 .lodging-page .lodging-list {
   position: absolute;
-  top: 1120px;           /* 기존 값 유지 */
-  left: 50%;
-  transform: translateX(-50%);  /* 가운데 정렬 */
+  top: 1120px;
+  left: 50%;                 /* 화면의 가운데 기준 */
+  transform: translateX(-50%);/* 본인 너비의 절반만큼 왼쪽으로 */
   display: grid;
-  grid-template-columns: repeat(3, 287px);  /* 기존 3열 유지(안전) */
+  grid-template-columns: repeat(3, 287px);
   gap: 40px;
   z-index: 1;
-  /* 필요 시: width: max-content;  (브라우저에 따라 간격 계산이 어색하면) */
 }
-
 .lodging-page .lodging-card { text-align: center; }
 .lodging-page .lodging-image {
   width: 287px; height: 302px; object-fit: cover;
